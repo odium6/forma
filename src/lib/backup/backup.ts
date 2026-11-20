@@ -38,7 +38,8 @@ export function base64ToBlob(b64: string, mime: string): Blob {
 
 /** Settings that are tied to this device or are secrets are not exported. */
 function portableSettings(s: Settings): BackupData['settings'] {
-  const { pin: _pin, biometricCredentialId: _bio, persistentStorage: _ps, ...rest } = s;
+  const { pin: _pin, biometricCredentialId: _bio, persistentStorage: _ps, pushId: _push, ...rest } = s;
+  void _push;
   void _pin;
   void _bio;
   void _ps;
@@ -162,6 +163,7 @@ export async function restoreBackup(b: BackupFile, mode: 'replace' | 'merge'): P
     ...(mode === 'replace' ? d.settings : {}),
     pin: currentSettings?.pin ?? null,
     biometricCredentialId: currentSettings?.biometricCredentialId ?? null,
+    pushId: currentSettings?.pushId ?? null,
     onboarded: true,
   };
   ops.push(tx.objectStore('kv').put(settings as Settings, 'settings'));

@@ -34,7 +34,8 @@ function at(date: string, t: HHmm): Date {
 export function nextOccurrence(r: Reminder, from: Date, quiet: Settings['quietHours']): Date | null {
   if (!r.enabled || r.days.length === 0) return null;
   const start = toISODate(from);
-  for (let i = 0; i < 21; i++) {
+  // start a day early: yesterday's late reminder may be deferred by quiet hours into today
+  for (let i = -1; i < 21; i++) {
     const date = addDays(start, i);
     if (!occursOn(r, date)) continue;
     let when = at(date, r.time);

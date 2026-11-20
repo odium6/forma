@@ -4,6 +4,9 @@ import { fmtNum, nDays } from '@/lib/format';
 import { dailySeries, trendChange, weeklyAverageChange, type Point } from '@/lib/math/series';
 import { forecastGoal } from '@/lib/math/forecast';
 import { habitStats, indexLogs } from '@/lib/habits';
+import { pick } from '@/lib/notificationTexts';
+
+export { pick, NOTIFICATION_TEXTS } from '@/lib/notificationTexts';
 
 /**
  * Rule-based insights built from a fixed library of phrasings. No generated text:
@@ -19,16 +22,6 @@ export interface Insight {
   priority: number;
   /** Motivational (as opposed to factual) messages can be disabled in settings. */
   motivational: boolean;
-}
-
-function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
-export function pick<T>(variants: T[], seed: string): T {
-  return variants[hash(seed) % variants.length];
 }
 
 const kg = (v: number) => `${fmtNum(Math.abs(v), 1)} кг`;
@@ -187,11 +180,3 @@ export function visibleInsights(data: AppData, asOf?: ISODate, limit = 4): Insig
   const all = buildInsights(data, asOf);
   return (data.settings.motivation ? all : all.filter((i) => !i.motivational)).slice(0, limit);
 }
-
-export const NOTIFICATION_TEXTS = {
-  weigh: ['Пора внести вес — это займёт 10 секунд.', 'Утреннее измерение — лучший ориентир для тренда.', 'Небольшой шаг: внеси сегодняшний вес.'],
-  habits: ['Отметь привычки за сегодня.', 'Как прошёл день? Отметь выполненные привычки.'],
-  photo: ['Время для фото прогресса: тот же ракурс и свет.', 'Новое фото поможет увидеть изменения, которые не видны на весах.'],
-  custom: ['Напоминание FORMA'],
-  motivation: ['Каждое измерение делает прогноз точнее.', 'Маленькие шаги складываются в форму.', 'Регулярность важнее идеальности.'],
-} as const;

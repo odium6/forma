@@ -3,7 +3,7 @@ import type { Reminder } from '@/domain/types';
 import { getState } from '@/state/store';
 import { today } from '@/lib/dates';
 import { lastOccurrence } from '@/lib/reminders';
-import { NOTIFICATION_TEXTS, pick } from '@/lib/insights';
+import { reminderText, reminderUrl } from '@/lib/notificationTexts';
 import { habitStats, indexLogs } from '@/lib/habits';
 
 /**
@@ -50,17 +50,14 @@ function alreadyDone(r: Reminder): boolean {
 }
 
 export function reminderBody(r: Reminder, seed: string): string {
-  const base = pick([...NOTIFICATION_TEXTS[r.kind]], seed);
-  const s = getState();
-  if (s.settings.motivation && r.kind !== 'custom') return `${base} ${pick([...NOTIFICATION_TEXTS.motivation], `${seed}m`)}`;
-  return r.kind === 'custom' ? r.label : base;
+  return reminderText(r, seed, getState().settings.motivation);
 }
 
 export async function showReminder(r: Reminder, tagSuffix = ''): Promise<boolean> {
   if (notificationPermission() !== 'granted') return false;
   const reg = await navigator.serviceWorker?.getRegistration();
   if (!reg) return false;
-  const url = r.kind === 'weigh' ? './#/?entry=1' : r.kind === 'habits' ? './#/habits' : r.kind === 'photo' ? './#/photos' : './#/';
+  const url = reminderUrl(r.kind);
   const opts: NotificationOptions & { actions?: { action: string; title: string }[] } = {
     body: reminderBody(r, `${r.id}${today()}${tagSuffix}`),
     tag: `forma-${r.id}`,
@@ -79,7 +76,8 @@ export async function showReminder(r: Reminder, tagSuffix = ''): Promise<boolean
 
 async function tick() {
   const s = getState();
-  if (!s.settings.notificationsEnabled || notificationPermission() !== 'granted') return;
+  // when server push is on, the push Worker delivers reminders — avoid duplicates
+  if (!s.settings.notificationsEnabled || s.settings.pushId || notificationPermission() !== 'granted') return;
   const db = await getDB();
   const now = new Date();
   for (const r of s.reminders.filter((x) => x.enabled)) {

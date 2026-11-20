@@ -177,6 +177,8 @@ export interface Settings {
   lastBackupAt: number | null;
   persistentStorage: boolean | null;
   includePhotosInReports: boolean;
+  /** Device token for server push reminders (null = only in-app reminders). */
+  pushId: string | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -194,6 +196,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lastBackupAt: null,
   persistentStorage: null,
   includePhotosInReports: false,
+  pushId: null,
 };
 
 /** Everything except photo binaries: small enough to keep in memory. */

@@ -15,6 +15,68 @@ self.addEventListener('message', (e) => {
 });
 
 const MAX_SNOOZES = 3;
+const PUSH_API = ((import.meta.env.VITE_PUSH_API as string | undefined) ?? '').replace(/\/$/, '');
+const VAPID_PUBLIC_KEY = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? '';
+
+interface PushData {
+  title?: string;
+  body?: string;
+  url?: string;
+  tag?: string;
+  reminderId?: string;
+  kind?: string;
+  sub?: string;
+}
+
+// Server push (FORMA push Worker): shown even when the app is closed.
+self.addEventListener('push', (event) => {
+  let d: PushData = {};
+  try {
+    d = (event.data?.json() ?? {}) as PushData;
+  } catch {
+    d = { body: event.data?.text() };
+  }
+  const actions = d.reminderId
+    ? [
+        { action: 'enter', title: d.kind === 'weigh' ? 'Внести данные' : 'Открыть' },
+        { action: 'snooze', title: 'Отложить' },
+        { action: 'skip', title: 'Пропустить сегодня' },
+      ]
+    : [];
+  event.waitUntil(
+    self.registration.showNotification(d.title || 'FORMA', {
+      body: d.body ?? '',
+      tag: d.tag ?? 'forma',
+      icon: 'pwa-192.png',
+      badge: 'favicon-64.png',
+      data: { url: d.url ?? './#/', reminderId: d.reminderId, sub: d.sub },
+      actions,
+    } as NotificationOptions),
+  );
+});
+
+// The browser may rotate the subscription; re-register it with the Worker.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const e = event as ExtendableEvent;
+  e.waitUntil(
+    (async () => {
+      if (!PUSH_API || !VAPID_PUBLIC_KEY) return;
+      const db = await openDB('forma');
+      const settings = (await db.get('kv', 'settings')) as { pushId?: string | null } | undefined;
+      db.close();
+      if (!settings?.pushId) return;
+      const pad = '='.repeat((4 - (VAPID_PUBLIC_KEY.length % 4)) % 4);
+      const raw = atob((VAPID_PUBLIC_KEY + pad).replace(/-/g, '+').replace(/_/g, '/'));
+      const key = Uint8Array.from(raw, (c) => c.charCodeAt(0));
+      const sub = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      await fetch(`${PUSH_API}/v1/subscription/endpoint`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: settings.pushId, subscription: sub.toJSON() }) });
+    })(),
+  );
+});
+
+async function serverAction(sub: string, reminderId: string, action: 'snooze' | 'skip') {
+  await fetch(`${PUSH_API}/v1/action`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: sub, reminderId, action }) });
+}
 
 function todayISO() {
   const d = new Date();
@@ -36,9 +98,14 @@ async function updateState(id: string, patch: (s: Record<string, unknown>) => Re
 
 self.addEventListener('notificationclick', (event) => {
   const n = event.notification;
-  const data = (n.data ?? {}) as { url?: string; reminderId?: string };
+  const data = (n.data ?? {}) as { url?: string; reminderId?: string; sub?: string };
   n.close();
   const action = event.action;
+
+  if ((action === 'skip' || action === 'snooze') && data.sub && data.reminderId && PUSH_API) {
+    event.waitUntil(serverAction(data.sub, data.reminderId, action).catch(() => undefined));
+    return;
+  }
 
   if (action === 'skip' && data.reminderId) {
     event.waitUntil(updateState(data.reminderId, (s) => ({ ...s, skipDate: todayISO(), snoozedUntil: null })));

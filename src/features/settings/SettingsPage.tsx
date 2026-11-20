@@ -14,6 +14,7 @@ import { createBackup, parseBackup, restoreBackup, type BackupSummary } from '@/
 import type { BackupFile } from '@/lib/backup/schema';
 import { entriesCSV, habitsCSV, saveFile, stamp } from '@/lib/export/files';
 import { biometricsAvailable, hashPin, isValidPin, registerBiometric } from '@/lib/security';
+import { disableServerPush, enableServerPush, pushSupported, sendTestPush, serverPushConfigured } from '@/lib/push';
 import { GoalCard } from '@/features/progress/GoalCard';
 import { ChipGroup, NumberField, Notice, Segmented, ToggleRow, fieldValid } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
@@ -161,17 +162,73 @@ function NotificationsSection() {
     await saveSettings({ notificationsEnabled: v });
   };
 
+  const [pushBusy, setPushBusy] = useState(false);
+  const serverPush = serverPushConfigured();
+  const pushOn = !!settings.pushId;
+  const needsInstall = ios && !standalone;
+
+  const toggleServerPush = async (v: boolean) => {
+    setPushBusy(true);
+    try {
+      if (!v) {
+        await disableServerPush();
+        toast('Фоновые уведомления выключены');
+        return;
+      }
+      const r = await enableServerPush();
+      setPerm(notificationPermission());
+      const msg: Record<typeof r, string> = {
+        ok: 'Фоновые уведомления включены',
+        denied: 'Разрешение на уведомления не выдано. Его можно включить в настройках браузера или iOS.',
+        unsupported: 'Этот браузер не поддерживает push-уведомления',
+        'not-configured': 'Сервер уведомлений не настроен в этой сборке',
+        'not-installed': 'Сначала установи FORMA на экран «Домой»',
+        error: 'Не удалось подключиться к серверу уведомлений. Проверь интернет и попробуй ещё раз.',
+      };
+      toast(msg[r], { tone: r === 'ok' ? 'success' : 'error' });
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const testNotification = async () => {
+    if (pushOn) {
+      const ok = await sendTestPush().catch(() => false);
+      toast(ok ? 'Тестовое уведомление отправлено. Можно закрыть приложение — оно всё равно придёт.' : 'Не удалось отправить тест (не чаще раза в 30 секунд)', { tone: ok ? 'success' : 'error' });
+      return;
+    }
+    if (!reminders.length || !(await showReminder(reminders[0], `test${Date.now()}`))) toast('Не удалось показать уведомление', { tone: 'error' });
+  };
+
   const newReminder = (): Reminder => ({ id: uid(), enabled: true, label: DEFAULT_LABELS.weigh, kind: 'weigh', time: '08:00', days: [0, 1, 2, 3, 4, 5, 6], parity: 'all', createdAt: Date.now() });
 
   return (
     <section className="card">
       <div className="card-head"><h2>Уведомления</h2></div>
-      {perm === 'unsupported' ? (
+      {perm === 'unsupported' || needsInstall ? (
         <Notice tone="warn">
-          {ios && !standalone ? 'На iPhone уведомления доступны только после установки FORMA на экран «Домой» (Поделиться → На экран «Домой»), iOS 16.4+.' : 'Этот браузер не поддерживает уведомления.'}
+          {needsInstall ? 'На iPhone уведомления доступны только после установки FORMA на экран «Домой» (Safari → Поделиться → На экран «Домой»), iOS 16.4+. Затем открой FORMA с экрана «Домой» и включи уведомления здесь.' : 'Этот браузер не поддерживает уведомления.'}
         </Notice>
       ) : (
-        <ToggleRow icon="bell" title="Напоминания" hint={perm === 'denied' ? 'Запрещены в настройках браузера' : 'Показываются, пока FORMA открыта или работает в фоне'} checked={settings.notificationsEnabled && perm === 'granted'} onChange={enable} disabled={perm === 'denied'} />
+        <>
+          {serverPush && pushSupported() && (
+            <ToggleRow
+              icon="bell"
+              title="Уведомления при закрытом приложении"
+              hint={
+                perm === 'denied'
+                  ? 'Запрещены в настройках браузера'
+                  : 'Через сервер FORMA (Cloudflare). Туда передаётся только расписание напоминаний, часовой пояс и отметка «уже сделано сегодня» — без веса, фото и заметок.'
+              }
+              checked={pushOn && perm === 'granted'}
+              onChange={toggleServerPush}
+              disabled={pushBusy || perm === 'denied'}
+            />
+          )}
+          {!pushOn && (
+            <ToggleRow icon="bell" title="Напоминания в приложении" hint={perm === 'denied' ? 'Запрещены в настройках браузера' : 'Без сервера: показываются, пока FORMA открыта или работает в фоне'} checked={settings.notificationsEnabled && perm === 'granted'} onChange={enable} disabled={perm === 'denied'} />
+          )}
+        </>
       )}
       <ToggleRow icon="sparkle" title="Мотивационные сообщения" hint="Отдельно от напоминаний: вдохновляющие фразы в уведомлениях и на главной" checked={settings.motivation} onChange={(v) => void saveSettings({ motivation: v })} />
       <ToggleRow icon="moon" title="Тихие часы" hint={settings.quietHours.enabled ? `${settings.quietHours.start}–${settings.quietHours.end}: напоминания переносятся на конец периода` : 'Выключены'} checked={settings.quietHours.enabled} onChange={(v) => void saveSettings({ quietHours: { ...settings.quietHours, enabled: v } })} />
@@ -214,7 +271,7 @@ function NotificationsSection() {
         </div>
       )}
       <div className="row wrap" style={{ marginTop: 12 }}>
-        <button className="btn sm" disabled={!reminders.length || perm !== 'granted'} onClick={async () => { if (!(await showReminder(reminders[0], `test${Date.now()}`))) toast('Не удалось показать уведомление', { tone: 'error' }); }}>
+        <button className="btn sm" disabled={perm !== 'granted' || (!pushOn && !reminders.length)} onClick={testNotification}>
           Проверить уведомление
         </button>
         <button className="btn sm" disabled={!reminders.some((r) => r.enabled)} onClick={() => saveFile(new Blob([remindersToICS(reminders)], { type: 'text/calendar' }), 'forma-reminders.ics')}>
@@ -222,7 +279,9 @@ function NotificationsSection() {
         </button>
       </div>
       <p className="xs faint" style={{ marginTop: 10 }}>
-        FORMA работает без сервера, поэтому браузер показывает напоминания, пока приложение запущено или недавно было открыто; пропущенное напоминание покажется один раз при следующем открытии. Для гарантированной доставки экспортируй расписание в системный календарь.
+        {pushOn
+          ? 'Напоминания приходят даже при закрытом приложении. Если в этот день вес уже внесён (или привычки отмечены), напоминание не придёт. Доставку выполняют Apple / Google / Microsoft — обычно в пределах минуты, но без гарантии точного времени.'
+          : 'Без фоновых уведомлений браузер показывает напоминания, пока приложение запущено; пропущенное покажется один раз при следующем открытии. Можно также экспортировать расписание в системный календарь.'}
       </p>
       {editing && <ReminderSheet reminder={editing} onClose={() => setEditing(null)} />}
     </section>

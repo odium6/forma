@@ -41,6 +41,10 @@ describe('reminders', () => {
     const n = nextOccurrence(rem({ time: '23:00' }), new Date(2026, 0, 5, 12, 0), quiet)!;
     expect([n.getDate(), n.getHours()]).toEqual([6, 7]);
   });
+  it('finds a deferred reminder from the previous evening', () => {
+    const n = nextOccurrence(rem({ time: '23:00' }), new Date(2026, 0, 6, 6, 50), quiet)!;
+    expect([n.getDate(), n.getHours()]).toEqual([6, 7]);
+  });
   it('even/odd week alternation', () => {
     expect(occursOn(rem({ parity: 'even' }), '2026-01-05')).toBe(isoWeek('2026-01-05') % 2 === 0);
     const n = nextOccurrence(rem({ parity: 'odd', days: [0] }), new Date(2026, 0, 6, 9, 0), quiet)!; // after Mon of week 2

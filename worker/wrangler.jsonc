@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "forma-push",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://odium6.github.io",
+    "CONTACT": "https://github.com/odium6/forma"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "forma-push", "database_id": "051745ca-a727-407a-8ce7-f68274202eb6" }
+  ],
+  "observability": { "enabled": false }
+}
