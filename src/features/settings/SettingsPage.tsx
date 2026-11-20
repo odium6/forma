@@ -123,6 +123,9 @@ function AppearanceSection() {
         <div className="field">
           <span className="field-label">Тема</span>
           <Segmented label="Тема" value={settings.theme} onChange={(theme) => void saveSettings({ theme })} items={[{ value: 'light', label: 'Светлая' }, { value: 'dark', label: 'Тёмная' }, { value: 'system', label: 'Системная' }]} />
+          {settings.theme === 'system' && (
+            <span className="field-hint">Сейчас по настройкам устройства: {typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'тёмная' : 'светлая'}</span>
+          )}
         </div>
         <ToggleRow
           icon="sparkle"

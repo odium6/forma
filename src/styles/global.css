@@ -28,6 +28,7 @@ body {
   font-feature-settings: 'ss01', 'cv11';
   -webkit-tap-highlight-color: transparent;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 #root {
@@ -80,6 +81,7 @@ img { max-width: 100%; display: block; }
 .row.between { justify-content: space-between; }
 .grow { flex: 1 1 auto; min-width: 0; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.grid-2 > *, .grid-3 > * { min-width: 0; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
 @media (max-width: 520px) { .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
@@ -159,6 +161,23 @@ img { max-width: 100%; display: block; }
 }
 .input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent); }
 .input[aria-invalid='true'] { border-color: var(--danger); }
+/* iOS Safari gives date/time inputs an intrinsic width and collapses empty ones:
+   normalise them to regular field boxes. */
+input[type='date'].input,
+input[type='time'].input {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  height: 48px;
+  line-height: 46px;
+  padding-top: 0;
+  padding-bottom: 0;
+  text-align: left;
+}
+.input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 46px; line-height: 46px; }
+.input::-webkit-datetime-edit { padding: 0; }
 textarea.input { padding: 12px 14px; min-height: 88px; resize: vertical; line-height: 1.4; }
 select.input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%); background-position: calc(100% - 20px) 21px, calc(100% - 15px) 21px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 36px; }
 .input-wrap { position: relative; display: flex; align-items: center; }
@@ -218,15 +237,24 @@ button.list-item:active { opacity: 0.7; }
 .range-seg.seg-wrap { --seg-max: 64px; }
 .tabs-seg.seg-wrap { --seg-max: 120px; }
 
-/* Glisse integration: reduced glass mode / no backdrop support fallback */
+/* Glisse integration: reduced glass mode / no backdrop support fallback.
+   Only the glass *surfaces* become opaque; the selection lens keeps its own
+   translucent fill so the selected tab/segment stays visible. */
+:root[data-glass='reduced'] {
+  --lg-glass: var(--surface);
+  --lg-glass-active: var(--surface-2);
+  --lg-surface: var(--surface);
+}
 :root[data-glass='reduced'] .lg-glass,
 :root[data-glass='reduced'] .lg-menu-surface {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  background-color: var(--surface) !important;
 }
+:root[data-glass='reduced'] .lg-drawn { display: none; }
+:root[data-glass='reduced'] .lg-tab-bar-glass { box-shadow: inset 0 0 0 1px var(--border), var(--shadow-2); }
+:root[data-glass='reduced'] .lg-tab-lens.lg-glass { background-color: var(--lg-selection) !important; background-image: none !important; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .lg-glass, .lg-menu-surface { background-color: var(--surface) !important; }
+  :root { --lg-glass: var(--surface); --lg-surface: var(--surface); }
 }
 
 /* ── Stats & tables (shared) ──────────────────── */

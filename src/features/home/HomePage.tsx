@@ -13,7 +13,15 @@ import { useOpenEntry } from '@/features/entry/EntrySheet';
 import { Icon } from '@/ui/Icon';
 import { ProgressRing } from '@/ui/controls';
 import type { AppData } from '@/domain/types';
+import type { IconName } from '@/ui/Icon';
+import type { ThemeMode } from '@/domain/types';
 import './home.css';
+
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: IconName }[] = [
+  { mode: 'light', label: 'Светлая тема', icon: 'sun' },
+  { mode: 'dark', label: 'Тёмная тема', icon: 'moon' },
+  { mode: 'system', label: 'Как в системе', icon: 'monitor' },
+];
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -48,11 +56,11 @@ export function HomePage() {
             { label: 'Сформировать отчёт', icon: <Icon name="report" size={18} />, onSelect: () => nav('/reports') },
             { label: 'Календарь', icon: <Icon name="calendar" size={18} />, onSelect: () => nav('/calendar') },
             'separator',
-            {
-              label: data.settings.theme === 'dark' ? 'Светлая тема' : 'Тёмная тема',
-              icon: <Icon name={data.settings.theme === 'dark' ? 'sun' : 'moon'} size={18} />,
-              onSelect: () => void saveSettings({ theme: data.settings.theme === 'dark' ? 'light' : 'dark' }),
-            },
+            ...THEME_OPTIONS.map((t) => ({
+              label: `${t.label}${data.settings.theme === t.mode ? '  ✓' : ''}`,
+              icon: <Icon name={t.icon} size={18} />,
+              onSelect: () => void saveSettings({ theme: t.mode }),
+            })),
           ]}
         />
       </header>
