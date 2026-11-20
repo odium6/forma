@@ -34,11 +34,13 @@ export function LockProvider({ children }: { children: ReactNode }) {
     const touch = () => {
       lastActive.current = Date.now();
     };
+    // timeoutMs === 0 means "immediately": lock as soon as the app leaves the screen
     const check = () => {
-      if (Date.now() - lastActive.current > timeoutMs) setLocked(true);
+      if (timeoutMs > 0 && Date.now() - lastActive.current > timeoutMs) setLocked(true);
     };
     const onVis = () => {
       if (document.visibilityState === 'visible') check();
+      else if (timeoutMs === 0) setLocked(true);
       else touch();
     };
     const evs = ['pointerdown', 'keydown', 'scroll', 'touchstart'] as const;

@@ -68,34 +68,26 @@ function WeightTab({ data }: { data: AppData }) {
           <div className="stat-grid">
             <Stat label="Среднее за 7 дней" value={last7.length >= 3 ? fmtKg(mean(last7)) : null} hint={last7.length >= 3 ? `${last7.length} измер.` : 'нужно ≥ 3 измерений'} />
             <Stat label="Тренд 14 дней" value={t14 ? `${fmtSigned(t14.slope * 7, 2)} кг/нед` : null} hint={t14 ? `${t14.n} измер.` : 'мало данных'} />
-            <Stat label="Тренд 30 дней" value={t30 ? `${fmtSigned(t30.slope * 7, 2)} кг/нед` : null} hint={t30 ? `${t30.n} измер.${t30.outliersRemoved ? `, ${t30.outliersRemoved} выброс исключён` : ''}` : 'мало данных'} />
+            <Stat label="Тренд 30 дней" value={t30 ? `${fmtSigned(t30.slope * 7, 2)} кг/нед` : null} hint={t30 ? `${t30.n} измер.` : 'мало данных'} />
             <Stat label="Долгосрочно (90 дн.)" value={t90 ? `${fmtSigned(t90.slope * 30, 1)} кг/мес` : null} hint={t90 ? `${t90.n} измер.` : 'нужно 45+ дней наблюдений'} />
             <Stat label="Минимум" value={fmtKg(Math.min(...values))} hint={formatDate(s.points[values.indexOf(Math.min(...values))].date)} />
             <Stat label="Максимум" value={fmtKg(Math.max(...values))} hint={formatDate(s.points[values.indexOf(Math.max(...values))].date)} />
           </div>
-          <p className="small muted" style={{ marginTop: 14 }}>
-            Тренд — экспоненциальное сглаживание с учётом пропусков; темп — устойчивая линейная регрессия, которая исключает единичные выбросы. Выводы по двум последним измерениям не делаются.
-          </p>
         </section>
       </div>
       <div className="col">
         <GoalCard data={data} summary={s} />
         <section className="card">
-          <div className="card-head"><h2>Как считается прогноз</h2></div>
+          <div className="card-head"><h2>О прогнозе</h2></div>
           <div className="stack small" style={{ ['--gap' as string]: '10px' }}>
             {f.fit ? (
-              <>
-                <p>
-                  Последние 28 дней: <span className="num strong">{f.fit.n}</span> дней с измерениями, разброс вокруг тренда ±<span className="num">{fmtNum(f.fit.residualSD, 2)}</span> кг.
-                </p>
-                <p>
-                  Темп: <span className="num strong">{fmtSigned(f.kgPerWeek!, 2)} кг/нед</span> ({fmtNum(f.pctPerWeek!, 2)}% веса). Диапазон дат учитывает статистическую погрешность темпа и то, что темп со временем меняется (±20%).
-                </p>
-              </>
+              <p>
+                Прогноз строится по последним 4 неделям. Сейчас темп <span className="num strong">{fmtSigned(f.kgPerWeek!, 2)} кг/нед</span>.
+              </p>
             ) : (
-              <p>Для прогноза нужно минимум 6 дней с измерениями за 10+ дней. {f.needPoints > 0 && `Ещё ${f.needPoints} измер.`} {f.needSpanDays > 0 && `Ещё ${nDays(f.needSpanDays)} наблюдений.`}</p>
+              <p>Прогноз появится после 6 взвешиваний в течение 10 дней.{f.needPoints > 0 && ` Осталось взвешиваний: ${f.needPoints}.`}{f.needSpanDays > 0 && ` Ещё ${nDays(f.needSpanDays)}.`}</p>
             )}
-            <p className="muted">Вес колеблется на 0,5–2 кг из‑за воды, соли, углеводов, времени взвешивания и нагрузки. Поэтому прогресс и прогноз считаются по сглаженному тренду, а не по последнему значению.</p>
+            <p className="muted">Вес естественно колеблется на 0,5–2 кг за день — из‑за воды, соли и времени взвешивания. Поэтому FORMA ориентируется на сглаженный тренд, а не на одно значение.</p>
           </div>
         </section>
       </div>

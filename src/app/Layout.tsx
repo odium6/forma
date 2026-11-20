@@ -95,6 +95,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
       {!desktop && (
         <>
+          {loc.pathname === '/' && (
           <div className="fab-wrap">
             <Button
               className="fab"
@@ -107,9 +108,10 @@ export function Layout({ children }: { children: ReactNode }) {
               }
               onClick={() => openEntry()}
             >
-              {loc.pathname === '/' ? 'Внести данные' : undefined}
+              Внести данные
             </Button>
           </div>
+          )}
           <nav className="tabbar-wrap" aria-label="Основная навигация">
             <TabBar
               className="tabbar"

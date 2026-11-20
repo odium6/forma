@@ -194,10 +194,7 @@ function HeroCard({ s }: { s: Summary }) {
             {f.status === 'ok' && f.date ? (
               <>
                 Прогноз достижения: <strong>{formatDate(f.date)}</strong>
-                <span className="muted">
-                  {' '}
-                  (вероятно {formatDate(f.early!)} — {f.late ? formatDate(f.late) : 'позже'}; темп {fmtSigned(f.kgPerWeek!, 2)} кг/нед, точность {f.confidence === 'high' ? 'высокая' : f.confidence === 'medium' ? 'средняя' : 'низкая'})
-                </span>
+                <span className="muted"> · вероятно, {formatDate(f.early!)} — {f.late ? formatDate(f.late) : 'позже'}</span>
               </>
             ) : f.status === 'insufficient' ? (
               <>Прогноз появится, когда будет больше данных{f.needPoints > 0 ? `: ещё ${f.needPoints} измер.` : ''}{f.needSpanDays > 0 ? `${f.needPoints > 0 ? ' и' : ':'} ${nDays(f.needSpanDays)} наблюдений` : ''}.</>

@@ -293,7 +293,7 @@ export default function Onboarding() {
                   Расход ≈ <span className="num strong">{Math.round(plan.energy / 10) * 10} ккал</span>, для выбранного темпа ≈ <span className="num strong">{Math.round(plan.kcal.kcal / 10) * 10} ккал</span> в день.
                 </p>
                 <p className="small muted" style={{ marginTop: 4 }}>
-                  Оценка по формуле Миффлина — Сан Жеора, погрешность ±10–15%. {plan.kcal.floored ? 'Значение ограничено безопасным минимумом. ' : ''}Это не медицинская рекомендация.
+                  Приблизительная оценка, не медицинская рекомендация.
                 </p>
               </div>
             )}

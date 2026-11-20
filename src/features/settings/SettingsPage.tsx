@@ -131,7 +131,7 @@ function AppearanceSection() {
         <ToggleRow
           icon="sparkle"
           title="Liquid Glass"
-          hint="Стеклянная навигация и элементы управления. Выключи на слабых устройствах — останутся матовые поверхности."
+          hint="Стеклянные кнопки и панели. Выключи, если интерфейс работает медленно."
           checked={settings.glass === 'auto'}
           onChange={(v) => void saveSettings({ glass: v ? 'auto' : 'reduced' })}
         />
@@ -218,7 +218,7 @@ function NotificationsSection() {
               hint={
                 perm === 'denied'
                   ? 'Запрещены в настройках браузера'
-                  : 'Через сервер FORMA (Cloudflare). Туда передаётся только расписание напоминаний, часовой пояс и отметка «уже сделано сегодня» — без веса, фото и заметок.'
+                  : 'Вес, фото и заметки никуда не передаются'
               }
               checked={pushOn && perm === 'granted'}
               onChange={toggleServerPush}
@@ -226,7 +226,7 @@ function NotificationsSection() {
             />
           )}
           {!pushOn && (
-            <ToggleRow icon="bell" title="Напоминания в приложении" hint={perm === 'denied' ? 'Запрещены в настройках браузера' : 'Без сервера: показываются, пока FORMA открыта или работает в фоне'} checked={settings.notificationsEnabled && perm === 'granted'} onChange={enable} disabled={perm === 'denied'} />
+            <ToggleRow icon="bell" title="Напоминания в приложении" hint={perm === 'denied' ? 'Запрещены в настройках браузера' : 'Пока FORMA открыта'} checked={settings.notificationsEnabled && perm === 'granted'} onChange={enable} disabled={perm === 'denied'} />
           )}
         </>
       )}
@@ -275,14 +275,9 @@ function NotificationsSection() {
           Проверить уведомление
         </button>
         <button className="btn sm" disabled={!reminders.some((r) => r.enabled)} onClick={() => saveFile(new Blob([remindersToICS(reminders)], { type: 'text/calendar' }), 'forma-reminders.ics')}>
-          <Icon name="calendar" size={16} /> В календарь (.ics)
+          <Icon name="calendar" size={16} /> Добавить в календарь
         </button>
       </div>
-      <p className="xs faint" style={{ marginTop: 10 }}>
-        {pushOn
-          ? 'Напоминания приходят даже при закрытом приложении. Если в этот день вес уже внесён (или привычки отмечены), напоминание не придёт. Доставку выполняют Apple / Google / Microsoft — обычно в пределах минуты, но без гарантии точного времени.'
-          : 'Без фоновых уведомлений браузер показывает напоминания, пока приложение запущено; пропущенное покажется один раз при следующем открытии. Можно также экспортировать расписание в системный календарь.'}
-      </p>
       {editing && <ReminderSheet reminder={editing} onClose={() => setEditing(null)} />}
     </section>
   );
@@ -332,7 +327,7 @@ function ReminderSheet({ reminder, onClose }: { reminder: Reminder; onClose: () 
       <div className="field">
         <span className="field-label">Недели</span>
         <Segmented label="Чередование недель" value={r.parity} onChange={(parity) => set({ parity })} items={[{ value: 'all', label: 'Каждую' }, { value: 'even', label: 'Чётные' }, { value: 'odd', label: 'Нечётные' }]} />
-        <span className="field-hint">Номер недели — по ISO 8601. Для нескольких напоминаний в день создай несколько записей с разным временем.</span>
+        <span className="field-hint">Чтобы получать несколько напоминаний в день, добавь их отдельно с разным временем.</span>
       </div>
     </Sheet>
   );
@@ -367,7 +362,7 @@ function PrivacySection() {
               <span className="list-icon"><Icon name="clock" size={18} /></span>
               <span className="grow strong">Автоблокировка</span>
               <select className="input" style={{ width: 140, minHeight: 40 }} aria-label="Автоблокировка" value={settings.autoLockMinutes} onChange={(e) => void saveSettings({ autoLockMinutes: Number(e.target.value) })}>
-                {[1, 3, 5, 15, 30].map((m) => <option key={m} value={m}>через {m} мин</option>)}
+                {[0, 1, 3, 5, 15, 30].map((m) => <option key={m} value={m}>{m === 0 ? 'сразу' : `через ${m} мин`}</option>)}
               </select>
             </div>
             {bio && (
@@ -407,7 +402,7 @@ function PrivacySection() {
         )}
       </div>
       <p className="xs faint" style={{ marginTop: 10 }}>
-        PIN хранится только в виде хеша (PBKDF2-SHA-256, 310 000 итераций, случайная соль). Блокировка закрывает доступ через интерфейс FORMA, но не шифрует хранилище браузера: человек с полным доступом к устройству и инструментам разработчика может извлечь данные. Защищай устройство системным паролем.
+        Блокировка скрывает данные от посторонних глаз, но не заменяет код-пароль самого телефона.
       </p>
       {pinOpen && <PinSheet onClose={() => setPinOpen(false)} />}
     </section>
@@ -511,7 +506,7 @@ function DataSection() {
       <div className="card-head"><h2>Данные</h2></div>
       {(daysSince == null || daysSince > 14) && (
         <Notice tone="warn">
-          {daysSince == null ? 'Резервная копия ещё не создавалась.' : `Последняя резервная копия — ${daysSince} ${plural(daysSince, ['день', 'дня', 'дней'])} назад.`} Данные хранятся только в этом браузере и могут быть потеряны при очистке данных сайта, сбросе устройства или удалении PWA.
+          {daysSince == null ? 'Резервной копии ещё нет.' : `Последняя резервная копия — ${daysSince} ${plural(daysSince, ['день', 'дня', 'дней'])} назад.`} Данные хранятся только на этом устройстве — сохрани копию, чтобы не потерять их.
         </Notice>
       )}
       <div className="stack" style={{ marginTop: 12 }}>
@@ -529,11 +524,11 @@ function DataSection() {
           <dt>Записей</dt><dd className="num">{data.entries.length}</dd>
           <dt>Фото</dt><dd className="num">{data.photos.length}</dd>
           {est && <><dt>Занято</dt><dd className="num">{mb(est.usage)} из {mb(est.quota)}</dd></>}
-          <dt>Постоянное хранилище</dt>
+          <dt>Защита от автоочистки</dt>
           <dd>
-            {persisted ? 'включено' : (
-              <button className="link-btn" onClick={async () => { const p = await requestPersistence(); setPersisted(p); await saveSettings({ persistentStorage: p }); toast(p ? 'Браузер будет беречь данные' : 'Браузер не выдал постоянное хранилище. На iOS помогает установка на экран «Домой».'); }}>
-                запросить
+            {persisted ? 'включена' : (
+              <button className="link-btn" onClick={async () => { const p = await requestPersistence(); setPersisted(p); await saveSettings({ persistentStorage: p }); toast(p ? 'Включено: браузер не будет удалять данные FORMA' : 'Браузер не разрешил. На iPhone помогает установка на экран «Домой».'); }}>
+                включить
               </button>
             )}
           </dd>
@@ -607,27 +602,18 @@ function AboutSection() {
         <LogoMark size={52} />
         <div>
           <h2>FORMA</h2>
-          <p className="small muted">Версия {__APP_VERSION__} · работает офлайн</p>
+          <p className="small muted">Версия {__APP_VERSION__}</p>
         </div>
       </div>
       {!standalone && (
         <Notice icon="download">
-          {ios ? 'Установи FORMA: Safari → «Поделиться» → «На экран „Домой“». Так приложение работает как нативное, с уведомлениями и без панелей браузера.' : 'FORMA можно установить как приложение: значок установки в адресной строке или меню браузера → «Установить приложение».'}
+          {ios ? 'Установи FORMA: Safari → «Поделиться» → «На экран „Домой“». Так она работает как обычное приложение и может присылать уведомления.' : 'FORMA можно установить как приложение: меню браузера → «Установить приложение».'}
         </Notice>
       )}
       <p className="small muted" style={{ marginTop: 12 }}>
-        Все данные хранятся локально на устройстве (IndexedDB). Нет регистрации, рекламы, аналитики и сторонних трекеров. Расчёты выполняются по открытым формулам; рекомендации не являются медицинскими.
+        Данные хранятся только на этом устройстве. Без регистрации, рекламы и слежки. Рекомендации FORMA не являются медицинскими.
       </p>
-      <details className="licenses">
-        <summary className="small strong">Открытые компоненты</summary>
-        <ul className="small muted">
-          <li>Glisse (Liquid Glass) — MIT, © Kelvin Zhang</li>
-          <li>React, React Router — MIT</li>
-          <li>idb — ISC · Zod — MIT · pdf-lib, @pdf-lib/fontkit — MIT</li>
-          <li>Workbox — MIT · шрифт Onest — SIL Open Font License 1.1</li>
-        </ul>
-        <a className="small" href="third-party-licenses.txt" target="_blank" rel="noopener">Полные тексты лицензий</a>
-      </details>
+      <a className="small licenses" href="third-party-licenses.txt" target="_blank" rel="noopener">Лицензии</a>
     </section>
   );
 }

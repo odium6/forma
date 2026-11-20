@@ -191,7 +191,7 @@ function HabitDetail({ data, habit: h, idx, onClose, onEdit }: { data: AppData; 
         <div><div className="stat-label">Неделя</div><div className="stat-value num">{s.weekRate == null ? '—' : fmtPct(s.weekRate)}</div></div>
         <div><div className="stat-label">Месяц</div><div className="stat-value num">{s.monthRate == null ? '—' : fmtPct(s.monthRate)}</div></div>
       </div>
-      <p className="small muted">{describeSchedule(h.schedules[h.schedules.length - 1].schedule)}. Один пропуск не обнуляет серию, если перед ним и после него привычка выполнялась. Рекорд сохраняется при изменении расписания.</p>
+      <p className="small muted">{describeSchedule(h.schedules[h.schedules.length - 1].schedule)}. Один случайный пропуск не прерывает серию.</p>
       <div>
         <div className="field-label" style={{ marginBottom: 8 }}>12 недель — нажми на день, чтобы изменить отметку</div>
         <div className="heat" style={{ ['--hc' as string]: h.color }}>

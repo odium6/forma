@@ -5,7 +5,7 @@ import type { PhotoCategory, PhotoMeta } from '@/domain/types';
 import { addPhoto, deletePhoto, updatePhotoMeta, useData } from '@/state/store';
 import { formatDate, today } from '@/lib/dates';
 import { captureFrame, preparePhoto, type PreparedPhoto } from '@/lib/images';
-import { EmptyState, Segmented, Notice } from '@/ui/controls';
+import { EmptyState, Segmented, Notice, ToggleRow } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
 import { useFeedback } from '@/ui/feedback';
 import { Icon } from '@/ui/Icon';
@@ -18,11 +18,17 @@ type Filter = PhotoCategory | 'all';
 
 export default function PhotosPage() {
   const data = useData();
-  const { locked, hasPin } = useLock();
+  const { locked, hasPin, lock } = useLock();
+  const immediate = data.settings.autoLockMinutes === 0;
+  // with immediate auto-lock, photos lock again as soon as the section is left
+  useEffect(() => () => {
+    if (immediate) lock();
+  }, [immediate, lock]);
   const [filter, setFilter] = useState<Filter>('all');
   const [order, setOrder] = useState<'new' | 'old'>('new');
   const [pending, setPending] = useState<PreparedPhoto[] | null>(null);
   const [camera, setCamera] = useState(false);
+  const [choose, setChoose] = useState(false);
   const [viewer, setViewer] = useState<string | null>(null);
   const [compare, setCompare] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -69,13 +75,14 @@ export default function PhotosPage() {
                 <Icon name="compare" size={18} /> <span className="hide-xs">Сравнить</span>
               </button>
             )}
-            <button className="btn primary" onClick={() => fileRef.current?.click()} data-testid="photo-add">
-              <Icon name="plus" size={18} /> <span className="hide-xs">Добавить</span>
+            <button className="btn primary" onClick={() => setChoose(true)} data-testid="photo-add">
+              <Icon name="plus" size={18} /> Добавить
             </button>
           </>
         }
       />
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => onFiles(e.target.files)} data-testid="photo-input" />
+      {data.photos.length > 0 && (
       <div className="row wrap between">
         <Segmented
           label="Ракурс"
@@ -87,23 +94,15 @@ export default function PhotosPage() {
           <button className="btn sm ghost" onClick={() => setOrder(order === 'new' ? 'old' : 'new')} aria-label="Порядок сортировки">
             <Icon name={order === 'new' ? 'arrowDown' : 'arrowUp'} size={16} /> {order === 'new' ? 'Сначала новые' : 'Сначала старые'}
           </button>
-          <button className="btn sm" onClick={() => setCamera(true)}>
-            <Icon name="camera" size={16} /> Камера
-          </button>
         </div>
       </div>
+      )}
       {data.photos.length === 0 ? (
         <section className="card">
           <EmptyState
             icon="camera"
             title="Фото прогресса"
-            text="Снимай в одном месте, при одинаковом свете и в одной позе — так изменения будут заметнее. Фото не покидают устройство."
-            action={
-              <div className="row wrap" style={{ justifyContent: 'center' }}>
-                <button className="btn primary" onClick={() => fileRef.current?.click()}>Загрузить</button>
-                <button className="btn" onClick={() => setCamera(true)}>Снять</button>
-              </div>
-            }
+            text="Нажми «Добавить». Снимай в одном месте, при одинаковом свете и в одной позе — так изменения заметнее."
           />
         </section>
       ) : sorted.length === 0 ? (
@@ -123,9 +122,21 @@ export default function PhotosPage() {
           </section>
         ))
       )}
-      {!hasPin && data.photos.length > 0 && (
-        <Notice icon="lock">Можно защитить раздел PIN-кодом или биометрией в настройках приватности.</Notice>
-      )}
+      <Sheet open={choose} onClose={() => setChoose(false)} title="Добавить фото" size="sm">
+        <div className="list">
+          <button className="list-item" onClick={() => { setChoose(false); setCamera(true); }}>
+            <span className="list-icon"><Icon name="camera" size={20} /></span>
+            <span className="grow">
+              <span className="strong">Сделать снимок</span>
+              <span className="small muted" style={{ display: 'block' }}>С подсказкой, чтобы встать в ту же позу</span>
+            </span>
+          </button>
+          <button className="list-item" onClick={() => { setChoose(false); fileRef.current?.click(); }}>
+            <span className="list-icon"><Icon name="image" size={20} /></span>
+            <span className="grow strong">Выбрать из галереи</span>
+          </button>
+        </div>
+      </Sheet>
       {pending && <SaveSheet photos={pending} onClose={() => setPending(null)} />}
       {camera && (
         <CameraSheet
@@ -201,7 +212,6 @@ function SaveSheet({ photos, onClose }: { photos: PreparedPhoto[]; onClose: () =
         <label htmlFor="ph-note">Заметка</label>
         <input id="ph-note" className="input" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Например: утро, после сна" />
       </div>
-      <p className="xs faint">Оригинал сохраняется без изменений (включая метаданные файла) только в хранилище этого браузера.</p>
     </Sheet>
   );
 }
@@ -264,7 +274,6 @@ function Viewer({ photo, onClose }: { photo: PhotoMeta; onClose: () => void }) {
         <label htmlFor="v-note">Заметка</label>
         <input id="v-note" className="input" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
       </div>
-      <p className="xs faint">{photo.width}×{photo.height} · {(photo.size / 1024 / 1024).toFixed(1).replace('.', ',')} МБ</p>
     </Sheet>
   );
 }
@@ -341,23 +350,29 @@ function CameraSheet({ onClose, onCaptured, onFallback }: { onClose: () => void;
             {ghost && ghostUrl && <img className="ghost" src={ghostUrl} alt="" />}
             {count != null && <div className="countdown num">{count}</div>}
           </div>
-          <div className="row wrap between">
-            <Segmented label="Ракурс" value={cat} onChange={setCat} items={(Object.keys(CATEGORY_LABELS) as PhotoCategory[]).map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} />
-            <div className="row">
-              <button className={`chip ${ghost ? 'on' : ''}`} onClick={() => setGhost(!ghost)} disabled={!prev} title="Наложить прошлое фото для одинаковой позы">
-                <Icon name="layers" size={16} /> Контур
-              </button>
-              <button className="chip" onClick={() => setTimer(timer === 0 ? 3 : timer === 3 ? 10 : 0)}>
-                <Icon name="clock" size={16} /> {timer ? `${timer} с` : 'Таймер'}
-              </button>
-              <button className="chip" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Сменить камеру">
-                <Icon name="flip" size={16} />
-              </button>
-            </div>
+          <Segmented label="Ракурс" value={cat} onChange={setCat} items={(Object.keys(CATEGORY_LABELS) as PhotoCategory[]).map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))} />
+          {prev && (
+            <ToggleRow
+              icon="layers"
+              title="Подсказка позы"
+              hint="Прошлое фото этого ракурса просвечивает поверх камеры — встань так же"
+              checked={ghost}
+              onChange={setGhost}
+            />
+          )}
+          <div className="cam-controls">
+            <button type="button" className="cam-side" onClick={() => setTimer(timer === 0 ? 3 : timer === 3 ? 10 : 0)} aria-label="Таймер">
+              <span className={`cam-round ${timer ? 'on' : ''}`}><Icon name="clock" size={22} /></span>
+              <span className="cam-label">{timer ? `Таймер ${timer} с` : 'Без таймера'}</span>
+            </button>
+            <button type="button" className="cam-shutter" onClick={shoot} disabled={count != null} aria-label="Сделать снимок" data-testid="camera-shoot">
+              <span />
+            </button>
+            <button type="button" className="cam-side" onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')} aria-label="Сменить камеру">
+              <span className="cam-round"><Icon name="switchCamera" size={22} /></span>
+              <span className="cam-label">Сменить камеру</span>
+            </button>
           </div>
-          <button className="btn primary lg block" onClick={shoot} disabled={count != null}>
-            <Icon name="camera" size={20} /> Снять
-          </button>
         </>
       )}
     </Sheet>

@@ -104,8 +104,7 @@ export default function ReportsPage() {
 
       <section className="card export-bar">
         <div className="grow">
-          <h3>{PERIOD_LABELS[period]}: экспорт</h3>
-          <p className="small muted">PDF — для просмотра и печати, CSV — для таблиц, JSON — машиночитаемые данные отчёта.</p>
+          <h3>Скачать отчёт · {PERIOD_LABELS[period].toLowerCase()}</h3>
         </div>
         <div className="row wrap">
           <button className="btn primary" onClick={exportPDF} disabled={!!busy} data-testid="export-pdf"><Icon name="download" size={18} /> {busy === 'pdf' ? 'Готовим…' : 'PDF'}</button>
