@@ -1,0 +1,8 @@
+.disclosure {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 0 14px;
+  border-radius: var(--r-sm); border: 1px dashed var(--border-strong); background: transparent; color: var(--text-2);
+  font-weight: 540; text-align: left;
+}
+.disclosure[aria-expanded='true'] { border-style: solid; background: var(--surface-2); color: var(--text); }
+.dup { display: flex; flex-direction: column; gap: 10px; }
+.navy { padding: 10px 12px; border-radius: var(--r-sm); background: var(--lime-soft); }

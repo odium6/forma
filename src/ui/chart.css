@@ -1,0 +1,31 @@
+.chart { position: relative; width: 100%; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.chart svg { display: block; overflow: visible; }
+.chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart-axis { font-size: 11px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
+.chart-label { font-size: 11px; font-weight: 600; fill: var(--text-2); }
+.chart-label.target { fill: var(--green-strong); }
+:root[data-theme='dark'] .chart-label.target { fill: var(--lime); }
+.chart-target { stroke: var(--chart-target); stroke-width: 1.5; stroke-dasharray: 2 5; stroke-linecap: round; }
+.chart-range { fill: var(--lime-soft); }
+.chart-band { fill: var(--chart-band); }
+.chart-dot { fill: var(--surface); stroke: currentColor; stroke-width: 1.6; }
+.chart-line { fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.chart-line.dashed { stroke-width: 2; stroke-dasharray: 5 6; }
+.chart-cursor { stroke: var(--border-strong); stroke-width: 1; }
+.chart-hl { fill: var(--surface); stroke-width: 2.5; }
+.chart-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-3); font-size: var(--t-sm); pointer-events: none; }
+.chart-tip {
+  position: absolute; top: 0; width: 160px; padding: 8px 10px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-2);
+  font-size: 12px; pointer-events: none; display: flex; flex-direction: column; gap: 3px; z-index: 2;
+}
+.chart-tip-date { font-weight: 650; color: var(--text); }
+.chart-tip-row { display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.chart-swatch { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--t-xs); color: var(--text-2); }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-mark { width: 16px; height: 10px; position: relative; display: inline-block; }
+.legend-item.dots .legend-mark::after { content: ''; position: absolute; left: 4px; top: 1px; width: 8px; height: 8px; border-radius: 50%; border: 1.6px solid currentColor; box-sizing: border-box; }
+.legend-item.line .legend-mark::after { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 2.5px; border-radius: 2px; background: currentColor; }
+.legend-item.dashed .legend-mark::after { content: ''; position: absolute; left: 0; right: 0; top: 4px; border-top: 2px dashed currentColor; }
+.legend-item.band .legend-mark::after { content: ''; position: absolute; inset: 1px 0; border-radius: 3px; background: currentColor; opacity: 0.45; }

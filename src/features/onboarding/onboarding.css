@@ -1,0 +1,26 @@
+.onb {
+  min-height: 100dvh; max-width: 620px; margin: 0 auto; display: flex; flex-direction: column;
+  padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 20px) calc(var(--safe-bottom) + 16px) calc(var(--safe-left) + 20px);
+}
+.onb-top { display: flex; align-items: center; gap: 12px; min-height: 52px; }
+.onb-progress { flex: 1; display: flex; gap: 6px; }
+.onb-progress span { flex: 1; height: 4px; border-radius: 4px; background: var(--surface-3); transition: background 300ms var(--ease); }
+.onb-progress span.on { background: var(--green); }
+.onb-body { flex: 1; padding: 12px 0 24px; animation: fade-up 380ms var(--ease) both; }
+.onb-body h2 { font-size: 26px; }
+.onb-welcome { min-height: 62dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; }
+.onb-welcome h1 { font-size: 40px; letter-spacing: 0.16em; font-weight: 720; }
+.onb-lead { font-size: var(--t-lg); color: var(--text-2); max-width: 420px; }
+.onb-points { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.onb-points li { display: flex; gap: 12px; align-items: center; color: var(--text-2); }
+.onb-points svg { color: var(--green); flex: none; }
+:root[data-theme='dark'] .onb-points svg { color: var(--lime); }
+.onb-actions { display: flex; flex-direction: column; gap: 8px; position: sticky; bottom: 0; padding-top: 12px; background: linear-gradient(to top, var(--bg) 70%, transparent); }
+.activity .act { padding: 12px 4px; }
+.radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-strong); flex: none; transition: all 200ms; }
+.radio.on { border: 7px solid var(--green); }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.summary-grid .card { padding: 14px; }
+.big-num { font-size: clamp(22px, 6.4vw, 30px); font-weight: 650; letter-spacing: -0.03em; margin: 4px 0 2px; }
+.big-num small { font-size: 15px; color: var(--text-3); font-weight: 500; }
+.custom-row { margin-bottom: 8px; }

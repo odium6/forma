@@ -1,0 +1,26 @@
+{
+  "name": "FORMA — вес, форма, привычки",
+  "short_name": "FORMA",
+  "description": "Личный трекер веса, параметров тела, привычек и прогресса. Данные хранятся на устройстве.",
+  "id": "./",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#f3f5f0",
+  "theme_color": "#f3f5f0",
+  "lang": "ru",
+  "dir": "ltr",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    { "src": "pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "pwa-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Внести данные", "short_name": "Внести", "url": "./#/?entry=1", "icons": [{ "src": "pwa-192.png", "sizes": "192x192" }] },
+    { "name": "Привычки", "url": "./#/habits", "icons": [{ "src": "pwa-192.png", "sizes": "192x192" }] }
+  ]
+}

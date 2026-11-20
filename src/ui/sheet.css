@@ -1,0 +1,66 @@
+.sheet {
+  border: 0;
+  padding: 0;
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--safe-top) - 24px);
+  background: transparent;
+  color: var(--text);
+  overflow: visible;
+}
+.sheet::backdrop {
+  background: rgb(6 14 9 / 0.42);
+  animation: sheet-fade 220ms var(--ease);
+}
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--safe-top) - 24px);
+  background: var(--bg-elev);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--shadow-3);
+  padding-bottom: var(--safe-bottom);
+  animation: sheet-up 320ms var(--ease);
+  overflow: hidden;
+}
+.sheet-grip {
+  width: 38px; height: 5px; border-radius: 9px; background: var(--border-strong);
+  margin: 8px auto 0; flex: none;
+}
+.sheet-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px 6px 22px; flex: none;
+}
+.sheet-head h2 { font-size: var(--t-xl); }
+.sheet-content {
+  padding: 8px 22px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: var(--s-4);
+}
+.sheet-foot {
+  padding: 12px 22px calc(14px);
+  border-top: 1px solid var(--border);
+  display: flex; gap: 10px; justify-content: flex-end; flex: none;
+  background: var(--bg-elev);
+}
+.sheet-foot .btn { flex: 1; }
+
+@media (min-width: 720px) {
+  .sheet { margin: auto; max-width: 560px; }
+  .sheet-sm { max-width: 420px; }
+  .sheet-lg { max-width: 760px; }
+  .sheet-full { max-width: min(1100px, 94vw); }
+  .sheet-body { border-radius: var(--r-xl); padding-bottom: 0; animation: sheet-pop 260ms var(--ease); }
+  .sheet-grip { display: none; }
+  .sheet-head { padding-top: 18px; }
+  .sheet-foot .btn { flex: 0 0 auto; min-width: 120px; }
+}
+
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@keyframes sheet-pop { from { transform: scale(0.97); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sheet-fade { from { opacity: 0; } }
+
+html.sheet-open { overflow: hidden; }

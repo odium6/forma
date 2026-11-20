@@ -1,0 +1,74 @@
+.shell { min-height: 100dvh; }
+
+.main {
+  padding: calc(var(--safe-top) + 14px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + var(--tabbar-h) + 104px) calc(var(--safe-left) + 16px);
+  max-width: 1320px;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.page { display: flex; flex-direction: column; gap: var(--s-4); animation: fade-up 360ms var(--ease) both; }
+.page-head { display: flex; align-items: flex-end; gap: var(--s-3); padding: 6px 2px 4px; min-height: 52px; }
+.page-head h1 { font-size: clamp(26px, 6.5vw, 32px); }
+.page-sub { margin-top: 2px; }
+
+/* ── mobile tab bar + FAB (Liquid Glass via Glisse) ───────────── */
+.tabbar-wrap {
+  position: fixed; z-index: 50;
+  left: 0; right: 0; bottom: 0;
+  padding: 0 calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 10px) calc(var(--safe-left) + 12px);
+  display: flex; justify-content: center;
+  pointer-events: none;
+}
+.tabbar-wrap::before {
+  /* soft fade so content scrolling under the glass stays legible */
+  content: ''; position: absolute; inset: auto 0 0 0; height: calc(var(--safe-bottom) + 96px);
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg) 88%, transparent), transparent);
+  pointer-events: none; z-index: -1;
+}
+.tabbar-wrap { container-type: inline-size; overflow-x: clip; }
+.tabbar { pointer-events: auto; }
+.tabbar.lg-tab-bar[data-icons] { --lg-tab-width: min(84px, calc((100cqw - 8px) / 5)); }
+.tabbar .lg-tab { min-width: 0; }
+
+.fab-wrap {
+  position: fixed; z-index: 51;
+  right: calc(var(--safe-right) + 16px);
+  bottom: calc(var(--safe-bottom) + var(--tabbar-h) + 24px);
+}
+.fab.lg-button { height: 52px; border-radius: 26px; padding: 0 20px 0 7px; font-size: 15.5px; font-weight: 620; gap: 10px; }
+.fab.lg-button[data-icon='only'] { width: 56px; height: 56px; border-radius: 28px; padding: 0; }
+.fab-icon { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); box-shadow: 0 2px 8px rgb(80 120 0 / 0.25); }
+.fab.lg-button[data-icon='only'] .fab-icon { width: 42px; height: 42px; }
+
+/* ── desktop sidebar ─────────────────────────────────────────── */
+@media (min-width: 960px) {
+  .shell { display: grid; grid-template-columns: 264px minmax(0, 1fr); }
+  .main { padding: 28px 40px 64px; width: 100%; }
+  .sidebar {
+    position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 22px;
+    padding: 26px 18px 18px; border-right: 1px solid var(--border); background: var(--bg-elev);
+  }
+  .sidebar-top { padding: 0 8px 4px; }
+  .side-nav { display: flex; flex-direction: column; gap: 2px; }
+  .side-link {
+    display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px;
+    color: var(--text-2); font-weight: 540; transition: background var(--dur), color var(--dur);
+  }
+  .side-link:hover { background: var(--surface-2); color: var(--text); }
+  .side-link.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); }
+  .side-link.active svg { color: var(--green); }
+  :root[data-theme='dark'] .side-link.active svg { color: var(--lime); }
+  .sidebar-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0; }
+  .page-head h1 { font-size: 32px; }
+}
+
+/* dashboard grid helpers */
+.dash { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) {
+  .dash { grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); align-items: start; }
+  .dash > .span-2 { grid-column: 1 / -1; }
+}
+.col { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+
+

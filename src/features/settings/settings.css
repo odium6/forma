@@ -1,0 +1,9 @@
+.settings-grid { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
+.kv dt { color: var(--text-3); }
+.kv dd { margin: 0; text-align: right; font-weight: 540; }
+.settings .list-item .input { flex: none; }
+.licenses { margin-top: 12px; }
+.licenses summary { cursor: pointer; }
+.licenses ul { padding-left: 18px; margin: 8px 0 0; }

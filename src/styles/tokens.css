@@ -1,0 +1,138 @@
+/* FORMA design tokens. Light is the default; dark applies via [data-theme="dark"]
+   (set from settings, or resolved from the system preference). */
+
+:root {
+  color-scheme: light;
+  --font: 'Onest Variable', 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* palette */
+  --lime: #c8f250;
+  --lime-strong: #b4e330;
+  --lime-soft: #eef9d0;
+  --lime-ink: #1d3305;
+  --green: #22a052;
+  --green-strong: #178a43;
+  --green-deep: #0f5c36;
+  --forest: #0a3a25;
+  --graphite: #18211b;
+
+  --bg: #f3f5f0;
+  --bg-elev: #f8faf6;
+  --surface: #ffffff;
+  --surface-2: #f2f5ef;
+  --surface-3: #e8ede4;
+  --text: #141c17;
+  --text-2: #56625a;
+  --text-3: #8a948c;
+  --border: rgb(20 28 23 / 0.08);
+  --border-strong: rgb(20 28 23 / 0.14);
+  --focus: #22a052;
+
+  --positive: #1f9a4d;
+  --positive-soft: #e3f5e8;
+  --warn: #b7791f;
+  --warn-soft: #fbf0db;
+  --danger: #d93d42;
+  --danger-soft: #fbe5e5;
+  --info: #3b5d4a;
+  --info-soft: #e7eee9;
+
+  /* charts */
+  --chart-dot: #9aa59d;
+  --chart-trend: #22a052;
+  --chart-forecast: #0f5c36;
+  --chart-band: rgb(200 242 80 / 0.35);
+  --chart-target: #8cc21c;
+  --chart-grid: rgb(20 28 23 / 0.06);
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgb(16 28 20 / 0.04), 0 1px 1px rgb(16 28 20 / 0.03);
+  --shadow-2: 0 8px 24px -10px rgb(16 40 24 / 0.16), 0 2px 6px rgb(16 28 20 / 0.04);
+  --shadow-3: 0 24px 60px -20px rgb(10 40 20 / 0.32), 0 8px 18px -8px rgb(10 30 20 / 0.12);
+
+  /* radii & spacing */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* type scale */
+  --t-xs: 12px;
+  --t-sm: 13.5px;
+  --t-md: 15px;
+  --t-lg: 17px;
+  --t-xl: 21px;
+  --t-2xl: 28px;
+  --t-3xl: 36px;
+  --t-display: clamp(44px, 9vw, 64px);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur: 220ms;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --tabbar-h: 64px;
+
+  /* Glisse (Liquid Glass) — tuned to the FORMA palette */
+  --lg-fill: var(--green);
+  --lg-on: var(--green);
+  --lg-foreground: rgb(14 22 17 / 0.9);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --lime: #cdf55c;
+  --lime-strong: #bdea3e;
+  --lime-soft: rgb(205 245 92 / 0.12);
+  --lime-ink: #142303;
+  --green: #45c36a;
+  --green-strong: #5bd27d;
+  --green-deep: #8fe0a6;
+  --forest: #0f2a1d;
+
+  --bg: #0b100d;
+  --bg-elev: #101612;
+  --surface: #141a16;
+  --surface-2: #1a221d;
+  --surface-3: #232d26;
+  --text: #edf2ee;
+  --text-2: #a5b0a8;
+  --text-3: #6f7a72;
+  --border: rgb(237 242 238 / 0.08);
+  --border-strong: rgb(237 242 238 / 0.15);
+  --focus: #cdf55c;
+
+  --positive: #57d07c;
+  --positive-soft: rgb(87 208 124 / 0.13);
+  --warn: #f0b54a;
+  --warn-soft: rgb(240 181 74 / 0.13);
+  --danger: #ff6b6f;
+  --danger-soft: rgb(255 107 111 / 0.13);
+  --info: #a9c4b3;
+  --info-soft: rgb(169 196 179 / 0.1);
+
+  --chart-dot: #5f6b63;
+  --chart-trend: #5bd27d;
+  --chart-forecast: #cdf55c;
+  --chart-band: rgb(205 245 92 / 0.12);
+  --chart-target: #cdf55c;
+  --chart-grid: rgb(237 242 238 / 0.06);
+
+  --shadow-1: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-2: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  --shadow-3: 0 24px 60px -20px rgb(0 0 0 / 0.75);
+
+  --lg-foreground: rgb(255 255 255 / 0.94);
+}
