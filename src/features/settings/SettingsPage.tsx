@@ -5,7 +5,7 @@ import { useLock } from '@/app/lock';
 import type { ActivityLevel, Reminder, Sex } from '@/domain/types';
 import { deleteReminder, refreshAfterImport, saveProfile, saveReminder, saveSettings, useData, wipeAll } from '@/state/store';
 import { computeSummary } from '@/lib/summary';
-import { ACTIVITY_LABELS, LIMITS } from '@/lib/math/body';
+import { ACTIVITY_LABELS, LIMITS, TYPICAL } from '@/lib/math/body';
 import { formatDate, WEEKDAYS_SHORT } from '@/lib/dates';
 import { parseDecimal, plural, uid } from '@/lib/format';
 import { describeReminder, nextOccurrence, remindersToICS } from '@/lib/reminders';
@@ -102,7 +102,7 @@ function ProfileSection() {
         <ChipGroup label="Пол" value={sex} onChange={(v) => setSex(v as Sex)} options={[{ value: 'female', label: 'Женский' }, { value: 'male', label: 'Мужской' }]} />
         <div className="grid-2">
           <NumberField label="Год рождения" value={year} onChange={setYear} min={LIMITS.birthYear.min} max={LIMITS.birthYear.max} required />
-          <NumberField label="Рост" value={height} onChange={setHeight} suffix="см" min={LIMITS.height.min} max={LIMITS.height.max} required />
+          <NumberField label="Рост" value={height} onChange={setHeight} suffix="см" min={LIMITS.height.min} typical={TYPICAL.height} max={LIMITS.height.max} required />
         </div>
         <div className="field">
           <label htmlFor="p-act">Активность</label>
@@ -499,7 +499,7 @@ function DataSection() {
   };
 
   const daysSince = data.settings.lastBackupAt ? Math.floor((Date.now() - data.settings.lastBackupAt) / 86_400_000) : null;
-  const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1).replace('.', ',')} МБ`;
+  const mb = (n: number) => `${(n / 1024 / 1024).toFixed(2).replace('.', ',')} МБ`;
 
   return (
     <section className="card">
@@ -545,7 +545,6 @@ function DataSection() {
               text: 'Профиль, измерения, привычки, фото, достижения и настройки будут безвозвратно удалены с этого устройства. Сначала рекомендуем сделать резервную копию.',
               danger: true,
               confirm: 'Удалить всё',
-              typeToConfirm: 'удалить',
             });
             if (ok) {
               await wipeAll();

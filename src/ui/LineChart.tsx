@@ -90,7 +90,7 @@ export function LineChart({ series, from, to, height = 240, unit = '', target, r
     return () => ro.disconnect();
   }, []);
 
-  const fmt = formatValue ?? ((v: number) => `${fmtNum(v, 1)}${unit ? ` ${unit}` : ''}`);
+  const fmt = formatValue ?? ((v: number) => `${fmtNum(v, 2)}${unit ? ` ${unit}` : ''}`);
   const pad = { l: 40, r: 12, t: 14, b: 26 };
   const innerW = Math.max(10, width - pad.l - pad.r);
   const innerH = height - pad.t - pad.b;

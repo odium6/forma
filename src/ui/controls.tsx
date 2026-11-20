@@ -17,6 +17,7 @@ export function NumberField({
   autoFocus,
   testId,
   required,
+  typical,
 }: {
   label: string;
   value: string;
@@ -30,6 +31,8 @@ export function NumberField({
   autoFocus?: boolean;
   testId?: string;
   required?: boolean;
+  /** Usual range: outside it a warning is shown, the value is still accepted. */
+  typical?: { min: number; max: number };
 }) {
   const id = useId();
   const [touched, setTouched] = useState(false);
@@ -40,6 +43,7 @@ export function NumberField({
     else if (min != null && n < min) error = `Не меньше ${min}`;
     else if (max != null && n > max) error = `Не больше ${max}`;
   } else if (required && touched) error = 'Обязательное поле';
+  const unusual = !error && n != null && typical != null && (n < typical.min || n > typical.max);
   return (
     <div className="field">
       <label htmlFor={id} className={big ? 'sr-only' : undefined}>
@@ -58,13 +62,26 @@ export function NumberField({
           aria-invalid={!!error && touched}
           data-testid={testId}
           onBlur={() => setTouched(true)}
-          onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, '').slice(0, 7))}
+          onChange={(e) => onChange(limitDecimals(e.target.value.replace(/[^\d.,]/g, '')).slice(0, 8))}
         />
         {suffix && <span className="input-suffix">{suffix}</span>}
       </div>
-      {error && touched ? <span className="field-error">{error}</span> : hint ? <span className="field-hint">{hint}</span> : null}
+      {error && touched ? (
+        <span className="field-error">{error}</span>
+      ) : unusual ? (
+        <span className="field-warn">Необычное значение — проверь, всё ли верно</span>
+      ) : hint ? (
+        <span className="field-hint">{hint}</span>
+      ) : null}
     </div>
   );
+}
+
+/** Values are kept to two decimal places. */
+function limitDecimals(v: string): string {
+  const m = /^(\d*)([.,])?(\d*)/.exec(v);
+  if (!m) return v;
+  return m[2] != null ? `${m[1]}${m[2]}${m[3].slice(0, 2)}` : m[1];
 }
 
 export function fieldValid(value: string, min: number, max: number, required = false): boolean {

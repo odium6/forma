@@ -49,7 +49,7 @@ describe('insights', () => {
   it('reports weekly average change and is stable within a day', () => {
     const d = data({ entries: series('2026-01-01', 14, 90, -0.06), goals: [goal()] });
     const a = buildInsights(d, '2026-01-14');
-    expect(a.find((i) => i.id === 'week_avg')!.text).toMatch(/снизился на 0,4 кг/);
+    expect(a.find((i) => i.id === 'week_avg')!.text).toMatch(/снизился на 0,4\d кг/);
     expect(buildInsights(d, '2026-01-14').map((i) => i.text)).toEqual(a.map((i) => i.text));
   });
   it('explains a sudden jump as water, not fat', () => {

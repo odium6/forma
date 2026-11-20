@@ -142,7 +142,7 @@ function HeroCard({ s }: { s: Summary }) {
           <MaintenanceBand s={s} />
         ) : (
           <ProgressRing value={s.progress?.fraction ?? 0} size={176} label={pct != null ? `Выполнено ${pct}% цели` : 'Цель не задана'}>
-            <div className="ring-value num" data-testid="current-weight">{fmtNum(s.current!, 1)}</div>
+            <div className="ring-value num" data-testid="current-weight">{fmtNum(s.current!, 2)}</div>
             <div className="ring-unit">кг · тренд</div>
             {pct != null && <div className="ring-pct num">{pct}%</div>}
           </ProgressRing>
@@ -158,7 +158,7 @@ function HeroCard({ s }: { s: Summary }) {
           {m ? (
             <div>
               <dt>Диапазон</dt>
-              <dd className="num">{fmtNum(m.low, 1)}–{fmtNum(m.high, 1)} кг</dd>
+              <dd className="num">{fmtNum(m.low, 2)}–{fmtNum(m.high, 2)} кг</dd>
             </div>
           ) : s.target != null ? (
             <>
@@ -179,11 +179,11 @@ function HeroCard({ s }: { s: Summary }) {
           )}
           <div>
             <dt>7 дней</dt>
-            <dd className="num">{s.change7 == null ? <span className="faint">мало данных</span> : fmtSigned(s.change7, 1, 'кг')}</dd>
+            <dd className="num">{s.change7 == null ? <span className="faint">мало данных</span> : fmtSigned(s.change7, 2, 'кг')}</dd>
           </div>
           <div>
             <dt>30 дней</dt>
-            <dd className="num">{s.change30 == null ? <span className="faint">мало данных</span> : fmtSigned(s.change30, 1, 'кг')}</dd>
+            <dd className="num">{s.change30 == null ? <span className="faint">мало данных</span> : fmtSigned(s.change30, 2, 'кг')}</dd>
           </div>
         </dl>
       </div>
@@ -224,8 +224,8 @@ function MaintenanceBand({ s }: { s: Summary }) {
   const hi = m.high + span;
   const pos = Math.max(0, Math.min(1, (s.current! - lo) / (hi - lo)));
   return (
-    <div className="mband" role="img" aria-label={`Текущий вес ${fmtNum(s.current!, 1)} кг, диапазон ${fmtNum(m.low, 1)}–${fmtNum(m.high, 1)} кг`}>
-      <div className="ring-value num">{fmtNum(s.current!, 1)}</div>
+    <div className="mband" role="img" aria-label={`Текущий вес ${fmtNum(s.current!, 2)} кг, диапазон ${fmtNum(m.low, 2)}–${fmtNum(m.high, 2)} кг`}>
+      <div className="ring-value num">{fmtNum(s.current!, 2)}</div>
       <div className="ring-unit">кг · тренд</div>
       <div className="mband-track">
         <span className="mband-zone" />

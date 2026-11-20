@@ -1,7 +1,6 @@
 import type { BodyShapeGoal, MeasurementKey } from '@/domain/types';
 import { createGoal, getState, setMaintenance, updateGoal } from '@/state/store';
 import { ageFromBirthYear, diffDays, today } from '@/lib/dates';
-import { clampPace, goalDirection } from '@/lib/math/goals';
 import { parseDecimal } from '@/lib/format';
 import { paceValue, type GoalDraft } from './GoalEditor';
 
@@ -24,11 +23,11 @@ export async function saveGoalDraft(
   }
   if (s.maintenance?.enabled) await setMaintenance({ ...s.maintenance, enabled: false });
   const target = parseDecimal(draft.target);
-  // with a deadline the plan pace is the one the deadline requires (already validated as safe)
+  // with a deadline the plan pace is whatever the deadline requires (the user chose it)
   let pace = paceValue(draft.mode, draft.pace, isMinor);
   if (draft.date && target != null) {
     const weeks = diffDays(draft.date, today()) / 7;
-    if (weeks > 0) pace = clampPace(((Math.abs(target - currentWeight) / currentWeight) * 100) / weeks, goalDirection(currentWeight, target), isMinor);
+    if (weeks > 0) pace = ((Math.abs(target - currentWeight) / currentWeight) * 100) / weeks;
   }
   await createGoal({
     startWeight: currentWeight,

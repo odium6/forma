@@ -3,7 +3,7 @@ import type { ISODate, MeasurementKey } from '@/domain/types';
 import { addEntry, deleteEntry, updateEntry, useData } from '@/state/store';
 import { formatDate, nowTime, today } from '@/lib/dates';
 import { fmtKg, fmtNum, parseDecimal } from '@/lib/format';
-import { LIMITS, navyBodyFat } from '@/lib/math/body';
+import { LIMITS, TYPICAL, navyBodyFat } from '@/lib/math/body';
 import { allMetricKeys, MEASUREMENT_HINTS, metricLabel } from '@/lib/metrics';
 import { Sheet } from '@/ui/Sheet';
 import { NumberField, fieldValid, Notice, ChipGroup } from '@/ui/controls';
@@ -51,7 +51,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
     Object.fromEntries(Object.entries(editing?.measurements ?? {}).map(([k, v]) => [k, str(v)])),
   );
   const [showMore, setShowMore] = useState(opts.focus === 'measurements' || !!editing && (editing.bodyFat != null || Object.keys(editing.measurements).length > 0));
-  const [dupAction, setDupAction] = useState<'replace' | 'add' | null>(null);
+  const [dupAction, setDupAction] = useState<'replace' | 'add' | null>('add');
   const [saving, setSaving] = useState(false);
 
   const sameDay = useMemo(() => data.entries.filter((e) => e.date === date && e.id !== editing?.id), [data.entries, date, editing]);
@@ -76,7 +76,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
   const bigJump = w != null && lastWeight != null && !editing && Math.abs(w - lastWeight) > 3;
 
   const save = async () => {
-    if (!allValid || !hasValue || needsDupChoice || futureDate) return;
+    if (!allValid || !hasValue || needsDupChoice) return;
     setSaving(true);
     try {
       const payload = { date, time, weight: parseDecimal(weight), bodyFat: parseDecimal(bodyFat), measurements: parsedMeas, note: note.trim().slice(0, 1000) };
@@ -135,7 +135,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
             </button>
           )}
           <button className="btn" onClick={onClose}>Отмена</button>
-          <button className="btn primary" disabled={!allValid || !hasValue || needsDupChoice || saving || futureDate} onClick={save} data-testid="entry-save">
+          <button className="btn primary" disabled={!allValid || !hasValue || needsDupChoice || saving} onClick={save} data-testid="entry-save">
             Сохранить
           </button>
         </>
@@ -154,9 +154,9 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
           value={weight}
           onChange={setWeight}
           suffix="кг"
-          min={LIMITS.weight.min}
+          min={LIMITS.weight.min} typical={TYPICAL.weight}
           max={LIMITS.weight.max}
-          placeholder={lastWeight != null ? fmtNum(lastWeight, 1) : '0,0'}
+          placeholder={lastWeight != null ? fmtNum(lastWeight, 2) : '0,0'}
           autoFocus={opts.focus !== 'measurements'}
           testId="entry-weight"
           hint={lastWeight != null ? `Последний раз: ${fmtKg(lastWeight)}` : 'Можно внести только вес — остальное необязательно'}
@@ -167,14 +167,14 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
         <div className="grid-2">
           <div className="field">
             <label htmlFor="entry-date">Дата</label>
-            <input id="entry-date" className="input" type="date" value={date} max={today()} onChange={(e) => e.target.value && setDate(e.target.value)} />
+            <input id="entry-date" className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="entry-time">Время</label>
             <input id="entry-time" className="input" type="time" value={time} onChange={(e) => e.target.value && setTime(e.target.value)} />
           </div>
         </div>
-        {futureDate && <Notice tone="warn">Нельзя внести данные на будущую дату.</Notice>}
+        {futureDate && <Notice tone="warn">Это будущая дата — проверь, всё ли верно.</Notice>}
 
         {needsDupChoice || (!editing && sameDay.length > 0) ? (
           <div className="dup">
@@ -201,13 +201,13 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
         </button>
         {showMore && (
           <div className="stack fade-up">
-            <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} max={LIMITS.bodyFat.max} hint="Со смарт-весов, калипера или по формуле ниже" />
+            <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} typical={TYPICAL.bodyFat} max={LIMITS.bodyFat.max} hint="Со смарт-весов, калипера или по формуле ниже" />
             {navy != null && parseDecimal(bodyFat) == null && (
               <div className="row between navy">
                 <span className="small">
-                  Оценка по обхватам (метод ВМС США): <span className="num strong">{fmtNum(navy, 1)}%</span>
+                  Оценка по обхватам (метод ВМС США): <span className="num strong">{fmtNum(navy, 2)}%</span>
                 </span>
-                <button type="button" className="btn sm" onClick={() => setBodyFat(fmtNum(navy, 1))}>Подставить</button>
+                <button type="button" className="btn sm" onClick={() => setBodyFat(fmtNum(navy, 2))}>Подставить</button>
               </div>
             )}
             <div className="grid-2">
@@ -220,7 +220,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
                     value={meas[k] ?? ''}
                     onChange={(v) => setMeas((m) => ({ ...m, [k]: v }))}
                     suffix={unit}
-                    min={LIMITS.measurement.min}
+                    min={LIMITS.measurement.min} typical={TYPICAL.measurement}
                     max={LIMITS.measurement.max}
                     hint={k in MEASUREMENT_HINTS ? MEASUREMENT_HINTS[k as keyof typeof MEASUREMENT_HINTS] : undefined}
                   />

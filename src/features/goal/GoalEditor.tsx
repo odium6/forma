@@ -3,7 +3,7 @@ import type { BodyShapeGoal, ISODate, Profile } from '@/domain/types';
 import { ageFromBirthYear, formatDate, today } from '@/lib/dates';
 import { fmtKg, fmtNum, parseDecimal } from '@/lib/format';
 import { evaluateGoal, goalDirection, PACE, type GoalEvaluation } from '@/lib/math/goals';
-import { healthyWeightRange, LIMITS } from '@/lib/math/body';
+import { healthyWeightRange, LIMITS, TYPICAL } from '@/lib/math/body';
 import { NumberField, Notice, Segmented, fieldValid } from '@/ui/controls';
 import './goal.css';
 
@@ -51,11 +51,9 @@ export function useGoalEvaluation(draft: GoalDraft, profile: Pick<Profile, 'sex'
 }
 
 export function goalDraftValid(draft: GoalDraft, ev: GoalEvaluation | null): boolean {
-  if (draft.mode === 'maintain') return fieldValid(draft.tolerance, 0.2, 10, true);
+  // Nothing is forbidden: unsafe or unusual goals only show warnings.
+  if (draft.mode === 'maintain') return fieldValid(draft.tolerance, 0.01, 100, true);
   if (!ev) return false;
-  if (ev.verdict === 'blocked' || ev.verdict === 'unsafe') return false;
-  if (draft.mode === 'loss' && ev.direction === 'gain') return false;
-  if (draft.mode === 'gain' && ev.direction === 'loss') return false;
   return fieldValid(draft.bodyFat, LIMITS.bodyFat.min, LIMITS.bodyFat.max);
 }
 
@@ -97,8 +95,8 @@ export function GoalEditor({
             value={draft.tolerance}
             onChange={(v) => set({ tolerance: v })}
             suffix="± кг"
-            min={0.2}
-            max={10}
+            min={0.01}
+            max={100}
             required
             hint={currentWeight != null ? `Диапазон вокруг ${fmtKg(currentWeight)}. Естественные колебания веса — 1–2 кг.` : undefined}
           />
@@ -111,11 +109,11 @@ export function GoalEditor({
             value={draft.target}
             onChange={(v) => set({ target: v })}
             suffix="кг"
-            min={LIMITS.weight.min}
+            min={LIMITS.weight.min} typical={TYPICAL.weight}
             max={LIMITS.weight.max}
             required
             testId="goal-target"
-            hint={range ? `Здоровый диапазон для твоего роста (ИМТ 18,5–24,9): ${fmtNum(range.min, 1)}–${fmtNum(range.max, 1)} кг` : undefined}
+            hint={range ? `Здоровый диапазон для твоего роста (ИМТ 18,5–24,9): ${fmtNum(range.min, 2)}–${fmtNum(range.max, 2)} кг` : undefined}
           />
           {wrongDirection && <Notice tone="warn">Целевой вес {draft.mode === 'loss' ? 'больше' : 'меньше'} текущего. Проверь тип цели.</Notice>}
           <div className="field">
@@ -142,7 +140,7 @@ export function GoalEditor({
               </span>
             </div>
           )}
-          <NumberField label="Желаемый процент жира (необязательно)" value={draft.bodyFat} onChange={(v) => set({ bodyFat: v })} suffix="%" min={LIMITS.bodyFat.min} max={LIMITS.bodyFat.max} />
+          <NumberField label="Желаемый процент жира (необязательно)" value={draft.bodyFat} onChange={(v) => set({ bodyFat: v })} suffix="%" min={LIMITS.bodyFat.min} typical={TYPICAL.bodyFat} max={LIMITS.bodyFat.max} />
           {ev && (
             <div className="stack" style={{ ['--gap' as string]: '8px' }}>
               {ev.issues.map((i, k) => (
@@ -166,11 +164,12 @@ export function GoalEditor({
                 </button>
               )}
               {ev.verdict === 'blocked' && ev.minTargetWeight != null && (
-                <button type="button" className="btn sm" onClick={() => set({ target: fmtNum(ev.minTargetWeight!, 1) })}>
+                <button type="button" className="btn sm" onClick={() => set({ target: fmtNum(ev.minTargetWeight!, 2) })}>
                   Установить {fmtKg(ev.minTargetWeight)}
                 </button>
               )}
               {ev.verdict === 'ok' && <Notice tone="positive">Цель реалистична и безопасна.</Notice>}
+              {(ev.verdict === 'unsafe' || ev.verdict === 'blocked') && <p className="small muted">Сохранить цель можно и так — это твоё решение.</p>}
             </div>
           )}
         </>

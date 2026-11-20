@@ -3,7 +3,7 @@ import type { ActivityLevel, BodyShapeGoal, MeasurementKey, Sex } from '@/domain
 import { addCustomMetric, addEntry, refreshAfterImport, saveProfile, saveSettings } from '@/state/store';
 import { ageFromBirthYear, formatDate, nowTime, today } from '@/lib/dates';
 import { fmtKg, fmtNum, parseDecimal } from '@/lib/format';
-import { ACTIVITY_LABELS, BMI_LABELS, bmi, bmiCategory, healthyWeightRange, LIMITS, tdee } from '@/lib/math/body';
+import { ACTIVITY_LABELS, BMI_LABELS, bmi, bmiCategory, healthyWeightRange, LIMITS, TYPICAL, tdee } from '@/lib/math/body';
 import { calorieGuidance, weeksAtPace } from '@/lib/math/goals';
 import { MEASUREMENT_LABELS } from '@/lib/metrics';
 import { parseBackup, restoreBackup } from '@/lib/backup/backup';
@@ -161,7 +161,7 @@ export default function Onboarding() {
             </div>
             <div className="grid-2">
               <NumberField label="Год рождения" value={birthYear} onChange={setBirthYear} min={LIMITS.birthYear.min} max={LIMITS.birthYear.max} required placeholder="1995" testId="onb-year" />
-              <NumberField label="Рост" value={height} onChange={setHeight} suffix="см" min={LIMITS.height.min} max={LIMITS.height.max} required placeholder="170" testId="onb-height" />
+              <NumberField label="Рост" value={height} onChange={setHeight} suffix="см" min={LIMITS.height.min} typical={TYPICAL.height} max={LIMITS.height.max} required placeholder="170" testId="onb-height" />
             </div>
             {age != null && age < 18 && age >= 8 && (
               <Notice>Для людей младше 18 лет FORMA не применяет взрослые нормы и не даёт персональных рекомендаций по снижению веса. Отслеживание и привычки доступны полностью.</Notice>
@@ -171,7 +171,7 @@ export default function Onboarding() {
         {step === 2 && (
           <section className="stack">
             <h2>Текущий вес и активность</h2>
-            <NumberField label="Текущий вес" big value={weight} onChange={setWeight} suffix="кг" min={LIMITS.weight.min} max={LIMITS.weight.max} required placeholder="0,0" autoFocus testId="onb-weight" />
+            <NumberField label="Текущий вес" big value={weight} onChange={setWeight} suffix="кг" min={LIMITS.weight.min} typical={TYPICAL.weight} max={LIMITS.weight.max} required placeholder="0,0" autoFocus testId="onb-weight" />
             <div className="field">
               <span className="field-label">Уровень активности</span>
               <div className="list activity" role="radiogroup" aria-label="Уровень активности">
@@ -199,10 +199,10 @@ export default function Onboarding() {
           <section className="stack">
             <h2>Измерения тела</h2>
             <p className="muted">Необязательно. Обхваты часто меняются, даже когда вес стоит на месте.</p>
-            <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} max={LIMITS.bodyFat.max} />
+            <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} typical={TYPICAL.bodyFat} max={LIMITS.bodyFat.max} />
             <div className="grid-2">
               {Object.entries(MEASUREMENT_LABELS).map(([k, label]) => (
-                <NumberField key={k} label={label} value={meas[k] ?? ''} onChange={(v) => setMeas((m) => ({ ...m, [k]: v }))} suffix="см" min={LIMITS.measurement.min} max={LIMITS.measurement.max} />
+                <NumberField key={k} label={label} value={meas[k] ?? ''} onChange={(v) => setMeas((m) => ({ ...m, [k]: v }))} suffix="см" min={LIMITS.measurement.min} typical={TYPICAL.measurement} max={LIMITS.measurement.max} />
               ))}
             </div>
             <div className="field">
@@ -240,7 +240,7 @@ export default function Onboarding() {
               <label htmlFor="shape-note">Опиши своими словами {shape === 'custom' ? '' : '(необязательно)'}</label>
               <textarea id="shape-note" className="input" maxLength={300} value={shapeNote} onChange={(e) => setShapeNote(e.target.value)} placeholder="Например: подтянутый живот и больше энергии по утрам" />
             </div>
-            <NumberField label="Желаемая талия (необязательно)" value={targetWaist} onChange={setTargetWaist} suffix="см" min={LIMITS.measurement.min} max={LIMITS.measurement.max} />
+            <NumberField label="Желаемая талия (необязательно)" value={targetWaist} onChange={setTargetWaist} suffix="см" min={LIMITS.measurement.min} typical={TYPICAL.measurement} max={LIMITS.measurement.max} />
           </section>
         )}
         {step === 6 && plan && w != null && (
@@ -249,20 +249,20 @@ export default function Onboarding() {
             <div className="summary-grid">
               <div className="card flat">
                 <div className="eyebrow">Старт</div>
-                <div className="big-num num">{fmtNum(w, 1)} <small>кг</small></div>
+                <div className="big-num num">{fmtNum(w, 2)} <small>кг</small></div>
                 <div className="small muted">{formatDate(today(), { year: true })}</div>
               </div>
               {!plan.isMinor && (
                 <div className="card flat">
                   <div className="eyebrow">ИМТ</div>
-                  <div className="big-num num">{fmtNum(plan.bmi, 1)}</div>
+                  <div className="big-num num">{fmtNum(plan.bmi, 2)}</div>
                   <div className="small muted">{plan.bmiCat ? BMI_LABELS[plan.bmiCat] : ''}</div>
                 </div>
               )}
               {goal.mode !== 'maintain' && parseDecimal(goal.target) != null && (
                 <div className="card flat">
                   <div className="eyebrow">Цель</div>
-                  <div className="big-num num">{fmtNum(parseDecimal(goal.target)!, 1)} <small>кг</small></div>
+                  <div className="big-num num">{fmtNum(parseDecimal(goal.target)!, 2)} <small>кг</small></div>
                   <div className="small muted">{fmtKg(Math.abs(parseDecimal(goal.target)! - w))} {goal.mode === 'loss' ? 'снизить' : 'набрать'}</div>
                 </div>
               )}
@@ -284,7 +284,7 @@ export default function Onboarding() {
               </div>
             )}
             {plan.range && (
-              <p className="small muted">Здоровый диапазон веса для роста {fmtNum(profile!.heightCm, 0)} см: {fmtNum(plan.range.min, 1)}–{fmtNum(plan.range.max, 1)} кг (ИМТ 18,5–24,9). Это популяционный ориентир, а не требование.</p>
+              <p className="small muted">Здоровый диапазон веса для роста {fmtNum(profile!.heightCm, 0)} см: {fmtNum(plan.range.min, 2)}–{fmtNum(plan.range.max, 2)} кг (ИМТ 18,5–24,9). Это популяционный ориентир, а не требование.</p>
             )}
             {plan.kcal && plan.energy && (
               <div className="card flat">

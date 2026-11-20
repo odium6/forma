@@ -109,7 +109,7 @@ export function WeightChart({ data, summary, height = 260, defaultRange = 'M', s
             height={height}
             unit="кг"
             ariaLabel="График веса: измерения, средняя за 7 дней, тренд и прогноз"
-            target={target != null && !m ? { value: target, label: `Цель ${fmtNum(target, 1)}` } : null}
+            target={target != null && !m ? { value: target, label: `Цель ${fmtNum(target, 2)}` } : null}
             range={m && maintenance ? { lo: maintenance.low, hi: maintenance.high, label: 'Диапазон' } : null}
             emptyText="Нет измерений за этот период"
           />

@@ -24,8 +24,8 @@ export interface Insight {
   motivational: boolean;
 }
 
-const kg = (v: number) => `${fmtNum(Math.abs(v), 1)} кг`;
-const cm = (v: number) => `${fmtNum(Math.abs(v), 1)} см`;
+const kg = (v: number) => `${fmtNum(Math.abs(v), 2)} кг`;
+const cm = (v: number) => `${fmtNum(Math.abs(v), 2)} см`;
 
 export function activeGoal(data: AppData): Goal | null {
   return [...data.goals].reverse().find((g) => g.status === 'active') ?? null;
@@ -108,7 +108,7 @@ export function buildInsights(data: AppData, asOf: ISODate = todayFn()): Insight
     } else if (f.status === 'ok' && f.pctPerWeek != null) {
       if (f.pctPerWeek > (dir < 0 ? 1.0 : 0.5) + 0.1) {
         add('pace_fast', 'care', 85, [
-          `Темп сейчас около ${fmtNum(f.pctPerWeek, 1)}% веса в неделю — быстрее безопасного диапазона. Слишком быстрое снижение часто означает потерю воды и мышц; бережный темп надёжнее.`,
+          `Темп сейчас около ${fmtNum(f.pctPerWeek, 2)}% веса в неделю — быстрее безопасного диапазона. Слишком быстрое снижение часто означает потерю воды и мышц; бережный темп надёжнее.`,
         ]);
       } else {
         const planned = goal.pacePctPerWeek;

@@ -50,10 +50,10 @@ async function onboard(page: Page) {
   await next(page);
   await page.getByTestId('onb-weight').fill('80');
   await next(page);
-  // goal: an unsafe target is blocked first, then a safe one is accepted
+  // goal: an unhealthy target only warns — the user may still continue
   await page.getByTestId('goal-target').fill('45');
-  await expect(page.getByText('FORMA не будет строить план')).toBeVisible();
-  await expect(page.getByTestId('onb-next')).toBeDisabled();
+  await expect(page.getByText('Рекомендуем цель не ниже')).toBeVisible();
+  await expect(page.getByTestId('onb-next')).toBeEnabled();
   await page.getByTestId('goal-target').fill('72');
   await expect(page.getByText('Цель реалистична и безопасна.')).toBeVisible();
   await next(page);
@@ -62,7 +62,7 @@ async function onboard(page: Page) {
   await next(page); // shape
   await expect(page.getByRole('heading', { name: 'Твоя стартовая точка' })).toBeVisible();
   await next(page);
-  await expect(page.getByTestId('current-weight')).toHaveText('80,0');
+  await expect(page.getByTestId('current-weight')).toHaveText('80,00');
 }
 
 test('полный сценарий FORMA', async ({ page, context }) => {
@@ -71,12 +71,12 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   // ── entry: weight + measurements, duplicate-day handling ──
   await page.getByTestId('add-entry').click();
   await page.getByTestId('entry-weight').fill('79,6');
-  await expect(page.getByTestId('entry-save')).toBeDisabled(); // must choose what to do with the existing day entry
+  await expect(page.getByText(/уже есть запись/)).toBeVisible(); // warned about the existing day entry
   await page.getByRole('button', { name: 'Добавить ещё одно измерение' }).click();
   await page.getByRole('button', { name: 'Процент жира и измерения тела' }).click();
   await page.getByLabel('Бёдра').fill('101');
   await page.getByTestId('entry-save').click();
-  await expect(page.getByText('Сохранено: 79,6 кг')).toBeVisible();
+  await expect(page.getByText('Сохранено: 79,60 кг')).toBeVisible();
 
   // ── habit: create from preset and mark it done ──
   await page.goto('/#/habits');
@@ -140,7 +140,6 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   expect(backup.data.photos).toHaveLength(2);
 
   await page.getByTestId('wipe').click();
-  await page.getByLabel(/Введи «удалить»/).fill('удалить');
   await page.getByTestId('confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'FORMA' })).toBeVisible();
 

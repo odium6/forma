@@ -96,7 +96,7 @@ export default function ReportsPage() {
           </div>
           <div className="field">
             <label htmlFor="r-to">По</label>
-            <input id="r-to" className="input" type="date" min={custom.from} max={today()} value={custom.to} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, to: e.target.value }))} />
+            <input id="r-to" className="input" type="date" min={custom.from} value={custom.to} onChange={(e) => e.target.value && setCustom((c) => ({ ...c, to: e.target.value }))} />
           </div>
         </div>
       )}
@@ -120,11 +120,11 @@ export default function ReportsPage() {
           <div className="col">
             <section className="card">
               <div className="report-tiles">
-                <Tile label="Начальный вес" value={w.start != null ? `${fmtNum(w.start, 1)} кг` : '—'} />
-                <Tile label="Конечный вес" value={w.end != null ? `${fmtNum(w.end, 1)} кг` : '—'} />
-                <Tile label="Изменение" value={w.change != null ? `${fmtSigned(w.change, 1)} кг` : '—'} hint={w.trendChange != null ? `тренд ${fmtSigned(w.trendChange, 1)} кг` : undefined} />
-                <Tile label="Средний вес" value={w.average != null ? `${fmtNum(w.average, 1)} кг` : '—'} />
-                <Tile label="Минимум / максимум" value={w.min && w.max ? `${fmtNum(w.min.value, 1)} / ${fmtNum(w.max.value, 1)}` : '—'} />
+                <Tile label="Начальный вес" value={w.start != null ? `${fmtNum(w.start, 2)} кг` : '—'} />
+                <Tile label="Конечный вес" value={w.end != null ? `${fmtNum(w.end, 2)} кг` : '—'} />
+                <Tile label="Изменение" value={w.change != null ? `${fmtSigned(w.change, 2)} кг` : '—'} hint={w.trendChange != null ? `тренд ${fmtSigned(w.trendChange, 2)} кг` : undefined} />
+                <Tile label="Средний вес" value={w.average != null ? `${fmtNum(w.average, 2)} кг` : '—'} />
+                <Tile label="Минимум / максимум" value={w.min && w.max ? `${fmtNum(w.min.value, 2)} / ${fmtNum(w.max.value, 2)}` : '—'} />
                 <Tile label="Дней с весом" value={`${w.loggedDays} / ${report.days}`} />
               </div>
             </section>
@@ -156,9 +156,9 @@ export default function ReportsPage() {
                       {[...(report.bodyFat.count ? [report.bodyFat] : []), ...report.measurements].map((m) => (
                         <tr key={m.key}>
                           <td>{m.label}</td>
-                          <td className="num">{m.first ? `${fmtNum(m.first.value, 1)} ${m.unit}` : '—'}</td>
-                          <td className="num">{m.last ? `${fmtNum(m.last.value, 1)} ${m.unit}` : '—'}</td>
-                          <td className="num strong">{m.change != null ? `${fmtSigned(m.change, 1)} ${m.unit}` : '—'}</td>
+                          <td className="num">{m.first ? `${fmtNum(m.first.value, 2)} ${m.unit}` : '—'}</td>
+                          <td className="num">{m.last ? `${fmtNum(m.last.value, 2)} ${m.unit}` : '—'}</td>
+                          <td className="num strong">{m.change != null ? `${fmtSigned(m.change, 2)} ${m.unit}` : '—'}</td>
                         </tr>
                       ))}
                     </tbody>

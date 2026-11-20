@@ -1,14 +1,14 @@
 /** Russian number/word formatting helpers. */
 
-export function fmtNum(v: number, digits = 1): string {
+export function fmtNum(v: number, digits = 2): string {
   return v.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-export function fmtKg(v: number, digits = 1): string {
+export function fmtKg(v: number, digits = 2): string {
   return `${fmtNum(v, digits)} кг`;
 }
 
-export function fmtSigned(v: number, digits = 1, unit = ''): string {
+export function fmtSigned(v: number, digits = 2, unit = ''): string {
   const rounded = Number(v.toFixed(digits));
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : '';
   return `${sign}${fmtNum(Math.abs(rounded), digits)}${unit ? ` ${unit}` : ''}`;

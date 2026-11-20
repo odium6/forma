@@ -72,13 +72,13 @@ export function evaluateGoal(input: {
   let minTargetWeight: number | null = null;
   if (!isMinor) {
     const range = healthyWeightRange(heightCm);
-    minTargetWeight = Math.ceil(range.min * 10) / 10;
+    minTargetWeight = Math.ceil(range.min * 100) / 100;
     const targetBmi = bmi(targetWeight, heightCm);
     if (direction === 'loss' && targetBmi < 18.5) {
       raise('blocked');
       issues.push({
         level: 'danger',
-        text: `Целевой вес ниже нижней границы здорового диапазона для твоего роста (ИМТ ${targetBmi.toFixed(1).replace('.', ',')}). FORMA не будет строить план к такой цели. Минимальная поддерживаемая цель — ${minTargetWeight.toLocaleString('ru-RU')} кг.`,
+        text: `Целевой вес ниже нижней границы здорового диапазона для твоего роста (ИМТ ${targetBmi.toFixed(2).replace('.', ',')}). Рекомендуем цель не ниже ${minTargetWeight.toLocaleString('ru-RU')} кг.`,
       });
     } else if (direction === 'gain' && targetBmi >= 30) {
       raise('ambitious');
@@ -91,7 +91,7 @@ export function evaluateGoal(input: {
     });
     if (direction === 'loss' && age < 14) {
       raise('blocked');
-      issues.push({ level: 'danger', text: 'Цель снижения веса в этом возрасте FORMA не планирует. Отслеживание веса и привычек остаётся доступным.' });
+      issues.push({ level: 'danger', text: 'Снижение веса в этом возрасте стоит обсудить с врачом.' });
     }
   }
 
@@ -111,14 +111,14 @@ export function evaluateGoal(input: {
     const days = diffDays(targetDate, today);
     if (days <= 0) {
       raise('unsafe');
-      issues.push({ level: 'danger', text: 'Выбранная дата уже наступила. Выбери срок в будущем.' });
+      issues.push({ level: 'danger', text: 'Выбранная дата уже наступила.' });
     } else {
       requiredPctPerWeek = ((Math.abs(deltaKg) / currentWeight) * 100) / (days / 7);
       if (requiredPctPerWeek > maxPace + 1e-9) {
         raise('unsafe');
         issues.push({
           level: 'danger',
-          text: `Такой срок требует темпа ${requiredPctPerWeek.toFixed(1).replace('.', ',')}% веса в неделю — это выше безопасного предела (${String(maxPace).replace('.', ',')}%). Быстрое изменение веса чаще связано с потерей воды и мышц и с откатом.${earliestSafeDate ? ' Предлагаем сдвинуть срок.' : ''}`,
+          text: `Такой срок требует темпа ${requiredPctPerWeek.toFixed(2).replace('.', ',')}% веса в неделю — это выше безопасного предела (${String(maxPace).replace('.', ',')}%). Быстрое изменение веса чаще связано с потерей воды и мышц и с откатом.${earliestSafeDate ? ' Можно сдвинуть срок.' : ''}`,
         });
       } else if (requiredPctPerWeek > ambitiousPace) {
         raise('ambitious');
@@ -146,12 +146,6 @@ export function evaluateGoal(input: {
     issues,
     isMinor,
   };
-}
-
-/** Clamps a user-chosen pace to the safe range for the direction. */
-export function clampPace(pct: number, direction: GoalDirection, isMinor: boolean): number {
-  const max = direction === 'gain' ? PACE.gain.max : isMinor ? PACE.minorLossMax : PACE.loss.max;
-  return Math.min(max, Math.max(0.1, pct));
 }
 
 /** Rough planning-only daily energy guidance for adults; floors prevent unsafe advice. */

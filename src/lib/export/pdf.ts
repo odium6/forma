@@ -126,11 +126,11 @@ export async function buildReportPDF(r: Report, opts: { name: string; target: nu
   // summary tiles
   const w = r.weight;
   const tiles: [string, string][] = [
-    ['Начальный вес', w.start != null ? `${fmtNum(w.start, 1)} кг` : '—'],
-    ['Конечный вес', w.end != null ? `${fmtNum(w.end, 1)} кг` : '—'],
-    ['Изменение', w.change != null ? `${fmtSigned(w.change, 1)} кг` : '—'],
-    ['Средний вес', w.average != null ? `${fmtNum(w.average, 1)} кг` : '—'],
-    ['Изменение тренда', w.trendChange != null ? `${fmtSigned(w.trendChange, 1)} кг` : '—'],
+    ['Начальный вес', w.start != null ? `${fmtNum(w.start, 2)} кг` : '—'],
+    ['Конечный вес', w.end != null ? `${fmtNum(w.end, 2)} кг` : '—'],
+    ['Изменение', w.change != null ? `${fmtSigned(w.change, 2)} кг` : '—'],
+    ['Средний вес', w.average != null ? `${fmtNum(w.average, 2)} кг` : '—'],
+    ['Изменение тренда', w.trendChange != null ? `${fmtSigned(w.trendChange, 2)} кг` : '—'],
     ['Дней с измерениями', `${w.loggedDays} из ${r.days}`],
     ['Привычки', r.habitRate != null ? `${Math.round(r.habitRate * 100)}%` : '—'],
     ['Достижения', String(r.achievements.length)],
@@ -166,11 +166,11 @@ export async function buildReportPDF(r: Report, opts: { name: string; target: nu
     for (let i = 0; i <= 4; i++) {
       const v = lo + ((hi - lo) * i) / 4;
       page.drawLine({ start: { x: cx0, y: Y(v) }, end: { x: W - M, y: Y(v) }, thickness: 0.4, color: C.line });
-      draw(page, f, fmtNum(v, 1), cx0 - 6, Y(v) - 3, 7, C.faint, 'right');
+      draw(page, f, fmtNum(v, 2), cx0 - 6, Y(v) - 3, 7, C.faint, 'right');
     }
     if (opts.target != null && opts.target >= lo && opts.target <= hi) {
       page.drawLine({ start: { x: cx0, y: Y(opts.target) }, end: { x: W - M, y: Y(opts.target) }, thickness: 1, color: C.green, dashArray: [2, 3] });
-      draw(page, f, `Цель ${fmtNum(opts.target, 1)}`, W - M, Y(opts.target) + 4, 7, C.green, 'right');
+      draw(page, f, `Цель ${fmtNum(opts.target, 2)}`, W - M, Y(opts.target) + 4, 7, C.green, 'right');
     }
     for (const p of w.points) page.drawCircle({ x: X(p.day), y: Y(p.value), size: 1.6, borderColor: C.faint, borderWidth: 0.8, color: rgb(1, 1, 1) });
     for (let i = 1; i < w.points.length; i++) {
@@ -213,9 +213,9 @@ export async function buildReportPDF(r: Report, opts: { name: string; target: nu
       ['Параметр', 'Начало', 'Конец', 'Изменение', 'Замеров'],
       metrics.map((m) => [
         m.label,
-        m.first ? `${fmtNum(m.first.value, 1)} ${m.unit}` : '—',
-        m.last ? `${fmtNum(m.last.value, 1)} ${m.unit}` : '—',
-        m.change != null ? `${fmtSigned(m.change, 1)} ${m.unit}` : '—',
+        m.first ? `${fmtNum(m.first.value, 2)} ${m.unit}` : '—',
+        m.last ? `${fmtNum(m.last.value, 2)} ${m.unit}` : '—',
+        m.change != null ? `${fmtSigned(m.change, 2)} ${m.unit}` : '—',
         String(m.count),
       ]),
       [170, 85, 85, 85, 82],

@@ -190,7 +190,7 @@ function SaveSheet({ photos, onClose }: { photos: PreparedPhoto[]; onClose: () =
       footer={
         <>
           <button className="btn" onClick={onClose}>Отмена</button>
-          <button className="btn primary" disabled={busy || date > today()} onClick={save} data-testid="photo-save">Сохранить</button>
+          <button className="btn primary" disabled={busy} onClick={save} data-testid="photo-save">Сохранить</button>
         </>
       }
     >
@@ -206,7 +206,7 @@ function SaveSheet({ photos, onClose }: { photos: PreparedPhoto[]; onClose: () =
       </div>
       <div className="field">
         <label htmlFor="ph-date">Дата</label>
-        <input id="ph-date" className="input" type="date" max={today()} value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+        <input id="ph-date" className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
       </div>
       <div className="field">
         <label htmlFor="ph-note">Заметка</label>
@@ -245,7 +245,7 @@ function Viewer({ photo, onClose }: { photo: PhotoMeta; onClose: () => void }) {
           </button>
           <button
             className="btn primary"
-            disabled={!dirty || date > today()}
+            disabled={!dirty}
             onClick={async () => {
               await updatePhotoMeta({ ...photo, note: note.slice(0, 500), category: cat, date });
               toast('Сохранено', { tone: 'success' });
@@ -267,7 +267,7 @@ function Viewer({ photo, onClose }: { photo: PhotoMeta; onClose: () => void }) {
         </div>
         <div className="field">
           <label htmlFor="v-date">Дата</label>
-          <input id="v-date" className="input" type="date" max={today()} value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+          <input id="v-date" className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
         </div>
       </div>
       <div className="field">

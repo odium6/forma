@@ -153,6 +153,7 @@ img { max-width: 100%; display: block; }
 .field > label, .field-label { font-size: var(--t-sm); font-weight: 560; color: var(--text-2); }
 .field-hint { font-size: var(--t-xs); color: var(--text-3); }
 .field-error { font-size: var(--t-xs); color: var(--danger); }
+.field-warn { font-size: var(--t-xs); color: var(--warn); font-weight: 560; }
 .input {
   width: 100%; min-height: 48px; padding: 0 14px; border-radius: var(--r-sm);
   border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);

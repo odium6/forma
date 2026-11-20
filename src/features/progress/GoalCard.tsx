@@ -27,7 +27,7 @@ export function GoalCard({ data, summary: s }: { data: AppData; summary: Summary
   const startMaintenance = async () => {
     if (s.current == null) return;
     if (g && g.status === 'active') await updateGoal({ ...g, status: s.progress?.state === 'reached' ? 'achieved' : 'archived', achievedAt: s.progress?.state === 'reached' ? today() : g.achievedAt });
-    await setMaintenance({ enabled: true, centerWeight: Math.round(s.current * 10) / 10, toleranceKg: 1.5, startedAt: today() });
+    await setMaintenance({ enabled: true, centerWeight: Math.round(s.current * 100) / 100, toleranceKg: 1.5, startedAt: today() });
     toast('Режим поддержания включён', { tone: 'success' });
   };
 
@@ -42,7 +42,7 @@ export function GoalCard({ data, summary: s }: { data: AppData; summary: Summary
       {m ? (
         <div className="stack small" style={{ ['--gap' as string]: '8px' }}>
           <p>
-            Целевой диапазон: <span className="num strong">{fmtNum(m.centerWeight - m.toleranceKg, 1)}–{fmtNum(m.centerWeight + m.toleranceKg, 1)} кг</span>
+            Целевой диапазон: <span className="num strong">{fmtNum(m.centerWeight - m.toleranceKg, 2)}–{fmtNum(m.centerWeight + m.toleranceKg, 2)} кг</span>
           </p>
           <p className="muted">С {formatDate(m.startedAt)}. {s.maintenance?.state === 'inside' ? 'Сейчас тренд внутри диапазона.' : s.maintenance ? `Тренд ${s.maintenance.state === 'above' ? 'выше' : 'ниже'} диапазона на ${fmtKg(Math.abs(s.maintenance.deviation))}.` : ''}</p>
           <button
@@ -91,7 +91,7 @@ function GoalSheet({ data, summary: s, onClose }: { data: AppData; summary: Summ
   const { toast } = useFeedback();
   const g = s.goal;
   const m = data.maintenance?.enabled ? data.maintenance : null;
-  const current = s.current != null ? Math.round(s.current * 10) / 10 : null;
+  const current = s.current != null ? Math.round(s.current * 100) / 100 : null;
   const [draft, setDraft] = useState<GoalDraft>({
     mode: m ? 'maintain' : g?.targetWeight != null && current != null && g.targetWeight > current ? 'gain' : 'loss',
     target: g?.targetWeight != null ? String(g.targetWeight).replace('.', ',') : '',

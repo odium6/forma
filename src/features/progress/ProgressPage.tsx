@@ -69,7 +69,7 @@ function WeightTab({ data }: { data: AppData }) {
             <Stat label="Среднее за 7 дней" value={last7.length >= 3 ? fmtKg(mean(last7)) : null} hint={last7.length >= 3 ? `${last7.length} измер.` : 'нужно ≥ 3 измерений'} />
             <Stat label="Тренд 14 дней" value={t14 ? `${fmtSigned(t14.slope * 7, 2)} кг/нед` : null} hint={t14 ? `${t14.n} измер.` : 'мало данных'} />
             <Stat label="Тренд 30 дней" value={t30 ? `${fmtSigned(t30.slope * 7, 2)} кг/нед` : null} hint={t30 ? `${t30.n} измер.` : 'мало данных'} />
-            <Stat label="Долгосрочно (90 дн.)" value={t90 ? `${fmtSigned(t90.slope * 30, 1)} кг/мес` : null} hint={t90 ? `${t90.n} измер.` : 'нужно 45+ дней наблюдений'} />
+            <Stat label="Долгосрочно (90 дн.)" value={t90 ? `${fmtSigned(t90.slope * 30, 2)} кг/мес` : null} hint={t90 ? `${t90.n} измер.` : 'нужно 45+ дней наблюдений'} />
             <Stat label="Минимум" value={fmtKg(Math.min(...values))} hint={formatDate(s.points[values.indexOf(Math.min(...values))].date)} />
             <Stat label="Максимум" value={fmtKg(Math.max(...values))} hint={formatDate(s.points[values.indexOf(Math.max(...values))].date)} />
           </div>
@@ -138,8 +138,8 @@ function BodyTab({ data }: { data: AppData }) {
             <h2>{label(key).label}</h2>
             {visible.length > 0 ? (
               <p className="small muted">
-                Последнее: <span className="num strong">{fmtNum(pts[pts.length - 1].value, 1)} {unit}</span>
-                {change != null && <> · за период <span className="num strong">{fmtSigned(change, 1, unit)}</span></>}
+                Последнее: <span className="num strong">{fmtNum(pts[pts.length - 1].value, 2)} {unit}</span>
+                {change != null && <> · за период <span className="num strong">{fmtSigned(change, 2, unit)}</span></>}
               </p>
             ) : (
               <p className="small muted">Нет данных за период</p>
@@ -155,7 +155,7 @@ function BodyTab({ data }: { data: AppData }) {
               to={dayNumber(today())}
               unit={unit}
               height={280}
-              target={targetVal != null ? { value: targetVal, label: `Цель ${fmtNum(targetVal, 1)}` } : null}
+              target={targetVal != null ? { value: targetVal, label: `Цель ${fmtNum(targetVal, 2)}` } : null}
               series={[
                 { id: 'raw', label: 'Измерение', points: pts, style: 'dots', color: 'var(--chart-dot)' },
                 ...(pts.length >= 3 ? [{ id: 'trend', label: 'Тренд', points: pts.map((p, i) => ({ day: p.day, value: trend[i] })), style: 'line' as const, color: 'var(--chart-trend)', breakGapDays: 45 }] : []),
@@ -270,7 +270,7 @@ function CompareTab({ data }: { data: AppData }) {
     <section className="card stack">
       <ChipGroup label="Параметры для сравнения" multiple value={sel} onChange={(v) => setSel((v as SeriesKey[]).slice(0, 6))} options={keys.map((k) => ({ value: k, label: label(k) }))} />
       <Segmented label="Период" value={range} onChange={setRange} items={RANGE_ITEMS.filter((r) => r.value !== 'D')} className="range-seg" />
-      <LineChart ariaLabel="Сравнение изменения параметров в процентах" from={from} to={dayNumber(today())} unit="%" height={300} series={series} formatValue={(v) => `${fmtSigned(v, 1)}%`} />
+      <LineChart ariaLabel="Сравнение изменения параметров в процентах" from={from} to={dayNumber(today())} unit="%" height={300} series={series} formatValue={(v) => `${fmtSigned(v, 2)}%`} />
       <ChartLegend items={series.map((s) => ({ label: s.label, color: s.color, style: 'line' }))} />
       <p className="small muted">Каждая линия — изменение параметра в процентах от первого значения в выбранном периоде. Так вес и обхваты можно сравнивать на одной шкале.</p>
     </section>
@@ -284,7 +284,7 @@ function HistoryTab({ data }: { data: AppData }) {
   const rows = [...data.entries].reverse();
   const measLabel = (e: Entry) =>
     Object.entries(e.measurements)
-      .map(([k, v]) => `${metricLabel(k, data.customMetrics).label} ${fmtNum(v!, 1)}`)
+      .map(([k, v]) => `${metricLabel(k, data.customMetrics).label} ${fmtNum(v!, 2)}`)
       .join(', ');
 
   if (!rows.length) return <EmptyState icon="note" title="История пуста" text="Здесь появятся все внесённые записи." />;
@@ -320,8 +320,8 @@ function HistoryTab({ data }: { data: AppData }) {
                   <div className="strong">{formatDate(e.date)}</div>
                   <div className="xs faint num">{e.time}</div>
                 </td>
-                <td className="num strong">{e.weight != null ? fmtNum(e.weight, 1) : '—'}</td>
-                <td className="num hide-sm">{e.bodyFat != null ? `${fmtNum(e.bodyFat, 1)}%` : '—'}</td>
+                <td className="num strong">{e.weight != null ? fmtNum(e.weight, 2) : '—'}</td>
+                <td className="num hide-sm">{e.bodyFat != null ? `${fmtNum(e.bodyFat, 2)}%` : '—'}</td>
                 <td className="hide-sm small muted clip">{measLabel(e) || '—'}</td>
                 <td className="hide-sm small muted clip">{e.note || '—'}</td>
                 <td className="actions">

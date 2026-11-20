@@ -207,7 +207,6 @@ function HabitDetail({ data, habit: h, idx, onClose, onEdit }: { data: AppData; 
               <button
                 key={day}
                 className={`heat-cell ${ok ? 'ok' : v != null ? 'partial' : sched && !future ? 'miss' : ''} ${future ? 'future' : ''}`}
-                disabled={future || day < h.schedules[0].from}
                 title={`${formatDate(day)}${v != null ? `: ${v}` : ''}`}
                 aria-label={`${formatDate(day)}${ok ? ', выполнено' : ''}`}
                 onClick={() => {

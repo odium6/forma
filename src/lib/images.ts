@@ -1,6 +1,6 @@
 /** Image intake: validation by actual decoding, and a separate downscaled thumbnail. Originals are stored untouched. */
 
-export const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 200 * 1024 * 1024;
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export type AllowedMime = (typeof ALLOWED)[number];
 
@@ -26,7 +26,7 @@ function canvasToBlob(c: HTMLCanvasElement, type: string, q: number): Promise<Bl
 
 /** Validates by magic bytes and by decoding; rejects anything that is not a real JPEG/PNG/WebP. */
 export async function preparePhoto(file: Blob): Promise<PreparedPhoto> {
-  if (file.size > MAX_PHOTO_BYTES) throw new Error('Файл больше 30 МБ');
+  if (file.size > MAX_PHOTO_BYTES) throw new Error('Файл больше 200 МБ');
   const mime = await sniffMime(file);
   if (!mime) throw new Error('Поддерживаются JPEG, PNG и WebP. На iPhone выбери «Наиболее совместимый» формат камеры или загрузи фото через «Фото».');
   let bmp: ImageBitmap;

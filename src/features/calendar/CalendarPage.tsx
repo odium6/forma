@@ -67,7 +67,7 @@ export default function CalendarPage() {
               <Icon name="left" />
             </button>
             <h2 aria-live="polite">{formatMonthYear(month)}</h2>
-            <button className="btn icon ghost" onClick={() => setMonth(addMonths(month, 1))} aria-label="Следующий месяц" disabled={month >= startOfMonth(d0)}>
+            <button className="btn icon ghost" onClick={() => setMonth(addMonths(month, 1))} aria-label="Следующий месяц">
               <Icon name="right" />
             </button>
           </div>
@@ -85,11 +85,10 @@ export default function CalendarPage() {
                   role="gridcell"
                   className={`cal-day ${d === d0 ? 'today' : ''} ${selected === d ? 'sel' : ''} ${future ? 'future' : ''}`}
                   onClick={() => setSelected(d)}
-                  aria-label={`${formatDate(d)}${i.weight != null ? `, вес ${fmtNum(i.weight, 1)}` : ''}${i.habitsDue ? `, привычки ${i.habitsDone} из ${i.habitsDue}` : ''}`}
-                  disabled={future}
+                  aria-label={`${formatDate(d)}${i.weight != null ? `, вес ${fmtNum(i.weight, 2)}` : ''}${i.habitsDue ? `, привычки ${i.habitsDone} из ${i.habitsDue}` : ''}`}
                 >
                   <span className="cal-num num">{Number(d.slice(8))}</span>
-                  {i.weight != null && <span className="cal-w num">{fmtNum(i.weight, 1)}</span>}
+                  {i.weight != null && <span className="cal-w num">{fmtNum(i.weight, 2)}</span>}
                   {ratio != null && !future && (
                     <span className="cal-bar" aria-hidden="true">
                       <span style={{ width: `${ratio * 100}%` }} className={ratio >= 1 ? 'full' : ''} />
@@ -153,10 +152,10 @@ function DayDetails({ data, date, hideTitle }: { data: AppData; date: ISODate; h
                 <span className="time-pill num">{e.time}</span>
                 <span className="grow">
                   {e.weight != null && <span className="strong num">{fmtKg(e.weight)}</span>}
-                  {e.bodyFat != null && <span className="small muted num"> · жир {fmtNum(e.bodyFat, 1)}%</span>}
+                  {e.bodyFat != null && <span className="small muted num"> · жир {fmtNum(e.bodyFat, 2)}%</span>}
                   {Object.keys(e.measurements).length > 0 && (
                     <span className="small muted" style={{ display: 'block' }}>
-                      {Object.entries(e.measurements).map(([k, v]) => `${metricLabel(k, data.customMetrics).label} ${fmtNum(v!, 1)}`).join(' · ')}
+                      {Object.entries(e.measurements).map(([k, v]) => `${metricLabel(k, data.customMetrics).label} ${fmtNum(v!, 2)}`).join(' · ')}
                     </span>
                   )}
                   {e.note && <span className="small" style={{ display: 'block', marginTop: 2 }}>📝 {e.note}</span>}

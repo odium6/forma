@@ -81,11 +81,22 @@ export function navyBodyFat(
   return bf;
 }
 
-/** Plausible input bounds used by all forms and by backup validation. */
+/**
+ * Technical bounds only (positive, finite, sane units) — used by forms and backup validation.
+ * The user is never blocked by "typical" ranges; those only produce a warning (TYPICAL).
+ */
 export const LIMITS = {
-  weight: { min: 20, max: 400 },
-  height: { min: 100, max: 250 },
-  bodyFat: { min: 2, max: 75 },
-  measurement: { min: 5, max: 300 },
-  birthYear: { min: 1900, max: new Date().getFullYear() - 8 },
+  weight: { min: 0.1, max: 1000 },
+  height: { min: 20, max: 300 },
+  bodyFat: { min: 0.1, max: 99 },
+  measurement: { min: 0.1, max: 1000 },
+  birthYear: { min: 1900, max: new Date().getFullYear() },
+} as const;
+
+/** Usual adult ranges: values outside show "check the value", nothing more. */
+export const TYPICAL = {
+  weight: { min: 30, max: 300 },
+  height: { min: 120, max: 230 },
+  bodyFat: { min: 3, max: 65 },
+  measurement: { min: 10, max: 250 },
 } as const;

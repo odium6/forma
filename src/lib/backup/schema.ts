@@ -40,7 +40,7 @@ export const goalSchema = z.object({
   targetMeasurements: measurements,
   shape: z.enum(['leaner', 'athletic', 'stronger', 'healthier', 'maintain', 'custom']),
   shapeNote: text(300),
-  pacePctPerWeek: z.number().min(0).max(2),
+  pacePctPerWeek: z.number().min(0).max(100),
   status: z.enum(['active', 'achieved', 'archived']),
   achievedAt: isoDate.nullable(),
   createdAt: ts,
@@ -49,7 +49,7 @@ export const goalSchema = z.object({
 export const maintenanceSchema = z.object({
   enabled: z.boolean(),
   centerWeight: weight,
-  toleranceKg: z.number().min(0.2).max(10),
+  toleranceKg: z.number().min(0.01).max(100),
   startedAt: isoDate,
 });
 
