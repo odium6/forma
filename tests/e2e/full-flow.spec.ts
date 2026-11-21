@@ -70,6 +70,7 @@ test('полный сценарий FORMA', async ({ page, context }) => {
 
   // ── entry: weight + measurements, duplicate-day handling ──
   await page.getByTestId('add-entry').click();
+  await page.getByTestId('add-weight').click();
   await page.getByTestId('entry-weight').fill('79,6');
   await expect(page.getByText(/уже есть запись/)).toBeVisible(); // warned about the existing day entry
   await page.getByRole('button', { name: 'Добавить ещё одно измерение' }).click();
@@ -90,7 +91,7 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   await page.goto('/#/progress');
   await expect(page.getByRole('img', { name: /График веса/ })).toBeVisible();
   await page.getByRole('radio', { name: 'История' }).click();
-  await expect(page.locator('table tbody tr')).toHaveCount(2);
+  await expect(page.getByTestId('history-row')).toHaveCount(2);
 
   // ── calendar ──
   await page.goto('/#/calendar');
@@ -131,7 +132,7 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   await expect(page.getByLabel('Первый шаг, получено')).toBeVisible();
 
   // ── backup → wipe → restore ──
-  await page.goto('/#/settings');
+  await page.goto('/#/settings/data');
   const dl = page.waitForEvent('download');
   await page.getByTestId('backup-create').click();
   const backupPath = await (await dl).path();
@@ -166,7 +167,7 @@ test('полный сценарий FORMA', async ({ page, context }) => {
 
 test('тема: светлая, тёмная и системная сохраняются', async ({ page }) => {
   await onboard(page);
-  await page.goto('/#/settings');
+  await page.goto('/#/settings/appearance');
   await page.getByRole('radio', { name: 'Тёмная' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
@@ -182,7 +183,7 @@ test('тема: светлая, тёмная и системная сохран�
 
 test('PIN защищает фото', async ({ page }) => {
   await onboard(page);
-  await page.goto('/#/settings');
+  await page.goto('/#/settings/privacy');
   await page.getByTestId('pin-setup').click();
   await page.getByTestId('pin-a').fill('2468');
   await page.getByTestId('pin-b').fill('2468');

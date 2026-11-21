@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PageHeader } from '@/app/Layout';
+import { Link, useParams } from 'react-router';
+import { PageHeader, useIsDesktop } from '@/app/Layout';
 import { requestPersistence, storageEstimate } from '@/app/pwa';
 import { useLock } from '@/app/lock';
 import type { ActivityLevel, Reminder, Sex } from '@/domain/types';
@@ -19,33 +20,110 @@ import { GoalCard } from '@/features/progress/GoalCard';
 import { ChipGroup, NumberField, Notice, Segmented, ToggleRow, fieldValid } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
 import { useFeedback } from '@/ui/feedback';
-import { Icon } from '@/ui/Icon';
+import { Icon, type IconName } from '@/ui/Icon';
 import { LogoMark } from '@/ui/Logo';
 import './settings.css';
+
+type SectionId = 'profile' | 'goal' | 'appearance' | 'notifications' | 'privacy' | 'data' | 'about';
+
+const SECTIONS: { id: SectionId; title: string; icon: IconName; group: string }[] = [
+  { id: 'profile', title: 'Профиль', icon: 'user', group: 'Ты' },
+  { id: 'goal', title: 'Цель', icon: 'target', group: 'Ты' },
+  { id: 'appearance', title: 'Оформление', icon: 'sun', group: 'Приложение' },
+  { id: 'notifications', title: 'Уведомления', icon: 'bell', group: 'Приложение' },
+  { id: 'privacy', title: 'Приватность', icon: 'shield', group: 'Безопасность и данные' },
+  { id: 'data', title: 'Данные', icon: 'database', group: 'Безопасность и данные' },
+  { id: 'about', title: 'О приложении', icon: 'info', group: 'Безопасность и данные' },
+];
+
+function useSectionSummary(): Record<SectionId, string> {
+  const data = useData();
+  const { profile, settings, reminders } = data;
+  const s = useMemo(() => computeSummary(data), [data]);
+  const theme = settings.theme === 'light' ? 'Светлая' : settings.theme === 'dark' ? 'Тёмная' : 'Как в системе';
+  const activeRem = reminders.filter((r) => r.enabled).length;
+  return {
+    profile: profile ? [profile.name, `${profile.heightCm.toString().replace('.', ',')} см`].filter(Boolean).join(' · ') : '',
+    goal: data.maintenance?.enabled ? 'Поддержание веса' : s.target != null ? `${s.target.toString().replace('.', ',')} кг` : 'Не задана',
+    appearance: `${theme}${settings.glass === 'reduced' ? ' · без стекла' : ''}`,
+    notifications: settings.pushId ? `Фоновые · ${activeRem} ${plural(activeRem, ['напоминание', 'напоминания', 'напоминаний'])}` : activeRem ? `${activeRem} ${plural(activeRem, ['напоминание', 'напоминания', 'напоминаний'])}` : 'Выключены',
+    privacy: settings.pin ? `PIN включён${settings.biometricCredentialId ? ' · биометрия' : ''}` : 'Без PIN',
+    data: settings.lastBackupAt ? `Копия ${formatDate(new Date(settings.lastBackupAt).toISOString().slice(0, 10))}` : 'Копий ещё не было',
+    about: `Версия ${__APP_VERSION__}`,
+  };
+}
 
 export default function SettingsPage() {
   const data = useData();
   const s = useMemo(() => computeSummary(data), [data]);
-  useEffect(() => {
-    if (location.hash.includes('#goal')) document.getElementById('goal')?.scrollIntoView();
-  }, []);
+  const params = useParams();
+  const desktop = useIsDesktop();
+  const id = (SECTIONS.some((x) => x.id === params.section) ? params.section : null) as SectionId | null;
+  const current = id ?? (desktop ? 'profile' : null);
+  const meta = SECTIONS.find((x) => x.id === current);
+
+  const body = (sec: SectionId) =>
+    sec === 'profile' ? <ProfileSection /> :
+    sec === 'goal' ? <GoalCard data={data} summary={s} /> :
+    sec === 'appearance' ? <AppearanceSection /> :
+    sec === 'notifications' ? <NotificationsSection /> :
+    sec === 'privacy' ? <PrivacySection /> :
+    sec === 'data' ? <DataSection /> :
+    <AboutSection />;
+
+  if (!desktop && current && meta) {
+    return (
+      <div className="page settings settings-sub">
+        <header className="page-head sub-head">
+          <div className="grow">
+            <Link to="/settings" className="back-link"><Icon name="left" size={18} /> Настройки</Link>
+            <h1>{meta.title}</h1>
+          </div>
+        </header>
+        {body(current)}
+      </div>
+    );
+  }
+
   return (
     <div className="page settings">
       <PageHeader title="Настройки" />
-      <div className="settings-grid">
-        <div className="col">
-          <ProfileSection />
-          <GoalCard data={data} summary={s} />
-          <AppearanceSection />
-          <NotificationsSection />
-        </div>
-        <div className="col">
-          <PrivacySection />
-          <DataSection />
-          <AboutSection />
-        </div>
+      <div className="settings-layout">
+        <SettingsIndex active={desktop ? current : null} />
+        {desktop && current && meta && (
+          <div className="settings-pane settings-sub" key={current}>
+            <h2 className="pane-title">{meta.title}</h2>
+            {body(current)}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function SettingsIndex({ active }: { active: SectionId | null }) {
+  const sum = useSectionSummary();
+  const groups = [...new Set(SECTIONS.map((x) => x.group))];
+  return (
+    <nav className="settings-index" aria-label="Разделы настроек">
+      {groups.map((g) => (
+        <div key={g} className="section">
+          <h2 className="group-title">{g}</h2>
+          <div className="group">
+            {SECTIONS.filter((x) => x.group === g).map((x) => (
+              <Link key={x.id} to={`/settings/${x.id}`} className={`list-item${active === x.id ? ' on' : ''}`} aria-current={active === x.id ? 'page' : undefined} data-testid={`settings-${x.id}`}>
+                <span className="list-icon tint"><Icon name={x.icon} size={18} /></span>
+                <span className="list-text">
+                  <span className="list-title">{x.title}</span>
+                  {sum[x.id] && <span className="list-sub">{sum[x.id]}</span>}
+                </span>
+                <Icon name="right" size={16} className="chev" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+    </nav>
   );
 }
 
@@ -131,7 +209,7 @@ function AppearanceSection() {
         <ToggleRow
           icon="sparkle"
           title="Liquid Glass"
-          hint="Стеклянные кнопки и панели. Выключи, если интерфейс работает медленно."
+          hint="Стеклянная навигация и панели"
           checked={settings.glass === 'auto'}
           onChange={(v) => void saveSettings({ glass: v ? 'auto' : 'reduced' })}
         />
@@ -230,9 +308,9 @@ function NotificationsSection() {
           )}
         </>
       )}
-      <ToggleRow icon="sparkle" title="Мотивационные сообщения" hint="Отдельно от напоминаний: вдохновляющие фразы в уведомлениях и на главной" checked={settings.motivation} onChange={(v) => void saveSettings({ motivation: v })} />
-      <ToggleRow icon="check" title="Не напоминать, если уже сделано" hint={settings.skipIfDone ? 'Напоминание не придёт, если сегодня уже есть взвешивание, фото или все привычки отмечены' : 'Напоминания приходят всегда'} checked={settings.skipIfDone} onChange={(v) => void saveSettings({ skipIfDone: v })} />
-      <ToggleRow icon="moon" title="Тихие часы" hint={settings.quietHours.enabled ? `${settings.quietHours.start}–${settings.quietHours.end}: напоминания переносятся на конец периода` : 'Выключены'} checked={settings.quietHours.enabled} onChange={(v) => void saveSettings({ quietHours: { ...settings.quietHours, enabled: v } })} />
+      <ToggleRow icon="sparkle" title="Мотивационные сообщения" hint="Фразы в уведомлениях и на главной" checked={settings.motivation} onChange={(v) => void saveSettings({ motivation: v })} />
+      <ToggleRow icon="check" title="Не напоминать, если уже сделано" hint="Пропускать, если дело на сегодня уже отмечено" checked={settings.skipIfDone} onChange={(v) => void saveSettings({ skipIfDone: v })} />
+      <ToggleRow icon="moon" title="Тихие часы" hint={settings.quietHours.enabled ? `${settings.quietHours.start}–${settings.quietHours.end}` : 'Выключены'} checked={settings.quietHours.enabled} onChange={(v) => void saveSettings({ quietHours: { ...settings.quietHours, enabled: v } })} />
       {settings.quietHours.enabled && (
         <div className="grid-2" style={{ margin: '4px 0 12px' }}>
           <div className="field"><label htmlFor="q-s">Начало</label><input id="q-s" className="input" type="time" value={settings.quietHours.start} onChange={(e) => e.target.value && void saveSettings({ quietHours: { ...settings.quietHours, start: e.target.value } })} /></div>
@@ -370,7 +448,7 @@ function PrivacySection() {
               <ToggleRow
                 icon="fingerprint"
                 title="Биометрия"
-                hint="Face ID / Touch ID / Windows Hello — как быстрый способ разблокировки, PIN остаётся запасным"
+                hint="Face ID, Touch ID или Windows Hello"
                 checked={!!settings.biometricCredentialId}
                 onChange={async (v) => {
                   if (!v) return void saveSettings({ biometricCredentialId: null });

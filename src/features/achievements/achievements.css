@@ -1,19 +1,9 @@
-.level { display: flex; align-items: center; gap: 18px; background: linear-gradient(135deg, var(--forest), #14703f); color: #f1f7ec; border: 0; }
-.level .eyebrow { color: rgb(241 247 236 / 0.65); }
-.level .muted { color: rgb(241 247 236 / 0.7); }
-.level .progress-bar { background: rgb(255 255 255 / 0.15); }
-.level .progress-bar > span { background: var(--lime); }
-.level-badge { width: 72px; height: 72px; border-radius: 24px; flex: none; display: grid; place-items: center; font-size: 34px; font-weight: 700; background: var(--lime); color: var(--lime-ink); box-shadow: 0 8px 24px -8px rgb(200 242 80 / 0.6); }
-.group-title { font-size: var(--t-lg); margin-top: 8px; }
-.ach-grid { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 720px) { .ach-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1200px) { .ach-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.ach { display: flex; gap: 14px; align-items: flex-start; padding: 16px; }
-.ach h3 { font-size: var(--t-md); }
-.ach-icon { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; font-size: 24px; background: var(--lime-soft); flex: none; }
-.ach.locked .ach-icon { filter: grayscale(1); opacity: 0.45; background: var(--surface-2); }
-.ach.locked h3 { color: var(--text-2); }
-.ach-date { color: var(--green-strong); font-weight: 600; margin-top: 4px; }
-:root[data-theme='dark'] .ach-date { color: var(--lime); }
-.ach-prog { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.ach-prog .progress-bar { flex: 1; height: 6px; }
+.level { display: flex; flex-direction: column; gap: 10px; padding: 0 2px; }
+.ach { align-items: flex-start; padding: 14px 0; }
+.ach-icon { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; font-size: 19px; flex: none; background: var(--surface-2); }
+.ach.got .ach-icon { background: var(--primary-soft); }
+.ach.locked .ach-icon { filter: grayscale(1); opacity: 0.55; }
+.ach.locked .list-title { color: var(--text-secondary); }
+.ach-date { flex: none; white-space: nowrap; margin-top: 2px; }
+.ach-prog { display: flex; align-items: center; gap: 8px; margin-top: 8px; max-width: 260px; }
+.ach-prog .progress-bar { flex: 1; height: 4px; }

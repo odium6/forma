@@ -61,7 +61,7 @@ export function WeightChart({ data, summary, height = 260, defaultRange = 'M', s
       label: 'Среднее 7 дн.',
       points: points.map((p, i) => (ma[i] == null ? null : { day: p.day, value: ma[i]! })).filter((p): p is { day: number; value: number } => p != null),
       style: 'line',
-      color: 'var(--chart-target)',
+      color: 'var(--chart-average)',
       breakGapDays: 7,
     },
     { id: 'trend', label: 'Тренд', points: points.map((p, i) => ({ day: p.day, value: trend[i] })), style: 'line', color: 'var(--chart-trend)', breakGapDays: 21 },
@@ -116,7 +116,7 @@ export function WeightChart({ data, summary, height = 260, defaultRange = 'M', s
           <ChartLegend
             items={[
               { label: 'Измерения', color: 'var(--chart-dot)', style: 'dots' },
-              { label: 'Среднее 7 дн.', color: 'var(--chart-target)', style: 'line' },
+              { label: 'Среднее 7 дн.', color: 'var(--chart-average)', style: 'line' },
               { label: 'Тренд', color: 'var(--chart-trend)', style: 'line' },
               ...(forecastVisible ? [{ label: 'Прогноз и диапазон', color: 'var(--chart-forecast)', style: 'dashed' as const }] : []),
             ]}

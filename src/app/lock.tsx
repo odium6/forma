@@ -73,6 +73,7 @@ export function LockScreen({ scope }: { scope: 'app' | 'photos' }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [shake, setShake] = useState(0);
   const triedBio = useRef(false);
 
   const tryBio = useCallback(async () => {
@@ -106,6 +107,8 @@ export function LockScreen({ scope }: { scope: 'app' | 'photos' }) {
     } else {
       const w = registerFailedAttempt();
       setPin('');
+      setShake((n) => n + 1);
+      navigator.vibrate?.(60);
       setError(w ? `Неверный PIN. Повтор через ${Math.ceil(w / 1000)} с.` : 'Неверный PIN');
     }
   };
@@ -123,7 +126,7 @@ export function LockScreen({ scope }: { scope: 'app' | 'photos' }) {
         <LogoMark size={56} />
         <h2>{scope === 'app' ? 'FORMA заблокирована' : 'Фото защищены'}</h2>
         <p className="muted small">Введи PIN-код{settings.biometricCredentialId ? ' или используй биометрию' : ''}</p>
-        <div className="pin-dots" aria-hidden="true">
+        <div key={shake} className={`pin-dots${error ? ' err' : ''}${shake ? ' shake' : ''}`} aria-hidden="true">
           {Array.from({ length: Math.max(4, pin.length) }, (_, i) => (
             <span key={i} className={i < pin.length ? 'on' : ''} />
           ))}
@@ -144,10 +147,10 @@ export function LockScreen({ scope }: { scope: 'app' | 'photos' }) {
             <button key={d} type="button" onClick={() => press(d)}>{d}</button>
           ))}
           {settings.biometricCredentialId ? (
-            <button type="button" onClick={tryBio} aria-label="Биометрия"><Icon name="fingerprint" size={26} /></button>
+            <button type="button" className="plain" onClick={tryBio} aria-label="Биометрия"><Icon name="fingerprint" size={26} /></button>
           ) : <span />}
           <button type="button" onClick={() => press('0')}>0</button>
-          <button type="button" onClick={() => setPin((p) => p.slice(0, -1))} aria-label="Стереть"><Icon name="left" size={24} /></button>
+          <button type="button" className="plain" onClick={() => setPin((p) => p.slice(0, -1))} aria-label="Стереть"><Icon name="left" size={24} /></button>
         </div>
         <button className="btn primary block" disabled={pin.length < 4 || busy} onClick={() => submit(pin)} data-testid="pin-submit">
           Разблокировать

@@ -1,8 +1,22 @@
-.settings-grid { display: grid; gap: var(--s-4); grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 960px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
-.kv dt { color: var(--text-3); }
-.kv dd { margin: 0; text-align: right; font-weight: 540; }
+.settings-layout { display: grid; gap: var(--s-5); grid-template-columns: minmax(0, 1fr); }
+.settings-index { display: flex; flex-direction: column; gap: var(--s-5); }
+.settings-index .list-item.on { background: var(--surface-2); margin: 0 -10px; padding-left: 10px; padding-right: 10px; border-radius: var(--r-sm); }
+.settings-pane { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.pane-title { font-size: 22px; padding: 4px 2px 0; }
+@media (min-width: 960px) {
+  .settings-layout { grid-template-columns: 320px minmax(0, 1fr); align-items: start; gap: var(--s-8); }
+  .settings-index { position: sticky; top: 24px; }
+  .settings-pane { max-width: 680px; }
+}
+.sub-head { align-items: flex-end; }
+.sub-head h1 { margin-top: 4px; }
+/* the page title already names the category */
+.settings-sub > .card > .card-head > h2:first-child { display: none; }
+.settings-sub > .card > .card-head { justify-content: flex-end; }
+.settings-sub > .card > .card-head:not(:has(> :nth-child(2))) { display: none; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 0; }
+.kv dt { color: var(--text-tertiary); }
+.kv dd { margin: 0; text-align: right; font-weight: 560; }
 .settings .list-item .input { flex: none; }
 .licenses { margin-top: 12px; display: inline-block; }
 .licenses summary { cursor: pointer; }

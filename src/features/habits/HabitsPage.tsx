@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { PageHeader } from '@/app/Layout';
 import type { AppData, Habit, HabitSchedule } from '@/domain/types';
 import { deleteHabit, saveHabit, setHabitLog, useData } from '@/state/store';
@@ -12,7 +13,7 @@ import { Icon } from '@/ui/Icon';
 import './habits.css';
 
 const ICONS = ['💧', '🥗', '🍎', '🥦', '🚫', '🥤', '🍔', '🍫', '🥐', '🏋️', '🏃', '🚶', '🧘', '🚴', '🏊', '👟', '🌙', '😴', '☀️', '📖', '💊', '🧠', '🫁', '❤️'];
-const COLORS = ['#22a052', '#8cc21c', '#0f8a7a', '#5b7cfa', '#e8772e', '#d94f8a', '#9b5de5', '#c99a06'];
+const COLORS = ['#269b65', '#8fbf3b', '#2a9d8f', '#4f6fd8', '#c26a2e', '#c2577f', '#8a63d2', '#b8922a'];
 
 export default function HabitsPage() {
   const data = useData();
@@ -32,22 +33,47 @@ export default function HabitsPage() {
     <div className="page">
       <PageHeader
         title="Привычки"
-        subtitle={todayList.length ? `Сегодня выполнено ${done} из ${todayList.length}` : 'Маленькие действия, которые складываются в форму'}
         actions={
-          <button className="btn primary" onClick={() => setEditing('new')} data-testid="new-habit">
-            <Icon name="plus" size={18} /> Привычка
+          <button className="btn primary icon" aria-label="Новая привычка" onClick={() => setEditing('new')} data-testid="new-habit">
+            <Icon name="plus" size={22} />
           </button>
         }
       />
+      {todayList.length > 0 && (
+        <div className="habits-today" aria-label={`Сегодня выполнено ${done} из ${todayList.length}`}>
+          <div className="row between">
+            <span className="small muted">Сегодня</span>
+            <span className="num strong">{done} из {todayList.length}</span>
+          </div>
+          <div className="progress-bar"><span style={{ width: `${(done / todayList.length) * 100}%` }} /></div>
+        </div>
+      )}
       {active.length === 0 ? (
         <section className="card">
           <EmptyState icon="habits" title="Добавь первую привычку" text="Например: пить воду, не есть фастфуд, тренироваться 3 раза в неделю." action={<button className="btn primary" onClick={() => setEditing('new')}>Создать привычку</button>} />
         </section>
       ) : (
-        <div className="habit-grid">
-          {[...todayList, ...other].map((h) => (
-            <HabitCard key={h.id} habit={h} stats={stats.get(h.id)!} idx={idx} onOpen={() => setDetail(h.id)} />
-          ))}
+        <div className="habit-sections">
+          {todayList.length > 0 && (
+            <section className="section">
+              <h2 className="group-title">На сегодня</h2>
+              <div className="group habit-list">
+                {todayList.map((h) => (
+                  <HabitCard key={h.id} habit={h} stats={stats.get(h.id)!} idx={idx} onOpen={() => setDetail(h.id)} />
+                ))}
+              </div>
+            </section>
+          )}
+          {other.length > 0 && (
+            <section className="section">
+              <h2 className="group-title">В другие дни</h2>
+              <div className="group habit-list">
+                {other.map((h) => (
+                  <HabitCard key={h.id} habit={h} stats={stats.get(h.id)!} idx={idx} onOpen={() => setDetail(h.id)} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
       {archived.length > 0 && (
@@ -106,37 +132,32 @@ function HabitControl({ habit: h, date, value, compact }: { habit: Habit; date: 
 
 function HabitCard({ habit: h, stats: s, idx, onOpen }: { habit: Habit; stats: HabitStats; idx: LogIndex; onOpen: () => void }) {
   const d = today();
-  const week = rangeDays(addDays(d, -6), d);
+  const week = rangeDays(startOfWeek(d), addDays(startOfWeek(d), 6));
+  const doneWeek = week.filter((day) => isDoneValue(h, logValue(idx, h.id, day))).length;
+  const sched = describeSchedule(h.schedules[h.schedules.length - 1].schedule);
   return (
-    <article className={`card habit ${s.todayDone ? 'done' : ''}`} style={{ ['--hc' as string]: h.color }}>
-      <div className="habit-top">
-        <button className="habit-main" onClick={onOpen} aria-label={`Подробнее: ${h.name}`}>
-          <span className="habit-icon" aria-hidden="true">{h.icon}</span>
-          <span className="grow">
-            <span className="habit-name">{h.name}</span>
-            <span className="small muted">{describeSchedule(h.schedules[h.schedules.length - 1].schedule)}{h.kind !== 'check' ? ` · ${h.kind === 'limit' ? '≤' : ''}${h.target} ${h.unit}` : ''}</span>
+    <article className={`habit-row ${s.todayDone ? 'done' : ''}`} style={{ ['--hc' as string]: h.color }}>
+      <button className="habit-main" onClick={onOpen} aria-label={`Подробнее: ${h.name}`}>
+        <span className="habit-icon" aria-hidden="true">{h.icon}</span>
+        <span className="habit-text">
+          <span className="habit-name">{h.name}</span>
+          <span className="habit-sub">
+            {sched}
+            {h.kind !== 'check' ? ` · ${h.kind === 'limit' ? '≤ ' : ''}${h.target} ${h.unit}` : ''}
+            {s.current > 1 ? ` · ${s.current} ${s.unit === 'week' ? 'нед.' : 'дн.'} подряд` : ''}
           </span>
-        </button>
-        {s.todayScheduled ? <HabitControl habit={h} date={d} value={s.todayValue} /> : <span className="small faint">не сегодня</span>}
-      </div>
-      <div className="habit-foot">
-        <div className="week-dots" aria-label="Последние 7 дней">
-          {week.map((day) => {
-            const sched = isScheduledOn(h, day);
-            const ok = isDoneValue(h, logValue(idx, h.id, day));
-            return (
-              <span key={day} className={`wd ${ok ? 'ok' : sched ? (day === d ? 'pending' : 'miss') : 'off'}`} title={formatDateShort(day)}>
-                {WEEKDAYS_SHORT[weekday(day)].slice(0, 1)}
-              </span>
-            );
-          })}
-        </div>
-        <span className={`streak-pill ${s.current > 0 ? 'on' : ''}`} title={s.atRisk ? 'Один пропуск прощён — не пропусти следующий' : 'Текущая серия'}>
-          <Icon name="flame" size={15} /> <span className="num">{s.current}</span>
-          {s.unit === 'week' ? ' нед.' : ''}
-          {s.atRisk && <span className="risk" aria-label="серия под угрозой">!</span>}
+          <span className="week-dots" aria-label={`На этой неделе выполнено: ${doneWeek}`}>
+            {week.map((day) => {
+              const on = isScheduledOn(h, day);
+              const ok = isDoneValue(h, logValue(idx, h.id, day));
+              return (
+                <span key={day} className={`wd ${ok ? 'ok' : day > d ? 'future' : on ? (day === d ? 'pending' : 'miss') : 'off'}`} title={`${WEEKDAYS_SHORT[weekday(day)]}, ${formatDateShort(day)}`} />
+              );
+            })}
+          </span>
         </span>
-      </div>
+      </button>
+      {s.todayScheduled ? <HabitControl habit={h} date={d} value={s.todayValue} compact /> : <span className="xs faint">не сегодня</span>}
     </article>
   );
 }
@@ -185,7 +206,7 @@ function HabitDetail({ data, habit: h, idx, onClose, onEdit }: { data: AppData; 
       }
     >
       <div className="stat-row">
-        <div><div className="stat-label">Серия</div><div className="stat-value num">{s.current}</div></div>
+        <div><div className="stat-label">Подряд</div><div className="stat-value num">{s.current}</div></div>
         <div><div className="stat-label">Рекорд</div><div className="stat-value num">{s.best}</div></div>
         <div><div className="stat-label">Всего</div><div className="stat-value num">{s.total}</div></div>
         <div><div className="stat-label">Неделя</div><div className="stat-value num">{s.weekRate == null ? '—' : fmtPct(s.weekRate)}</div></div>
@@ -251,6 +272,7 @@ function HabitEditor({ habit, onClose, count }: { habit: Habit | null; onClose: 
   const [type, setType] = useState<SchedType>(cur?.type ?? 'daily');
   const [days, setDays] = useState<number[]>(cur?.type === 'weekdays' ? cur.days : [0, 1, 2, 3, 4]);
   const [times, setTimes] = useState(String(cur?.type === 'timesPerWeek' ? cur.times : 3));
+  const [pickIcon, setPickIcon] = useState(false);
 
   const schedule: HabitSchedule = type === 'daily' ? { type } : type === 'weekdays' ? { type, days: [...days].sort() } : { type, times: Number(times) };
   const valid = name.trim().length > 0 && (kind === 'check' || fieldValid(target, kind === 'limit' ? 0 : 1, 100000, true)) && (type !== 'weekdays' || days.length > 0) && (type !== 'timesPerWeek' || fieldValid(times, 1, 7, true));
@@ -315,16 +337,23 @@ function HabitEditor({ habit, onClose, count }: { habit: Habit | null; onClose: 
       </div>
       <div className="field">
         <span className="field-label">Иконка и цвет</span>
-        <div className="icon-pick" role="group" aria-label="Иконка">
-          {ICONS.map((i) => (
-            <button key={i} type="button" aria-pressed={icon === i} onClick={() => setIcon(i)}>{i}</button>
-          ))}
+        <div className="row look-row">
+          <button type="button" className="habit-icon big" style={{ ['--hc' as string]: color }} aria-expanded={pickIcon} aria-label={`Иконка ${icon}. Сменить`} onClick={() => setPickIcon((v) => !v)}>
+            {icon}
+          </button>
+          <div className="color-pick" role="group" aria-label="Цвет">
+            {COLORS.map((c) => (
+              <button key={c} type="button" aria-pressed={color === c} aria-label={`Цвет ${c}`} style={{ background: c }} onClick={() => setColor(c)} />
+            ))}
+          </div>
         </div>
-        <div className="color-pick" role="group" aria-label="Цвет">
-          {COLORS.map((c) => (
-            <button key={c} type="button" aria-pressed={color === c} aria-label={`Цвет ${c}`} style={{ background: c }} onClick={() => setColor(c)} />
-          ))}
-        </div>
+        {pickIcon && (
+          <div className="icon-pick fade-up" role="group" aria-label="Иконка">
+            {ICONS.map((i) => (
+              <button key={i} type="button" aria-pressed={icon === i} onClick={() => { setIcon(i); setPickIcon(false); }}>{i}</button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="field">
         <span className="field-label">Тип</span>
@@ -358,6 +387,12 @@ function HabitEditor({ habit, onClose, count }: { habit: Habit | null; onClose: 
         {habit && JSON.stringify(cur) !== JSON.stringify(schedule) && (
           <span className="field-hint">Новое расписание действует с сегодняшнего дня. Прошлые дни и рекорд серии не пересчитываются.</span>
         )}
+      </div>
+      <div className="field">
+        <span className="field-label">Напоминание</span>
+        <Link to="/settings/notifications" className="hint-link" onClick={onClose}>
+          <Icon name="bell" size={17} /> <span className="grow">Напоминание о привычках настраивается в уведомлениях</span> <Icon name="right" size={16} />
+        </Link>
       </div>
     </Sheet>
   );

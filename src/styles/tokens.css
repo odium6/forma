@@ -1,61 +1,68 @@
-/* FORMA design tokens. Light is the default; dark applies via [data-theme="dark"]
-   (set from settings, or resolved from the system preference). */
+/* FORMA design system — tokens.
+   Semantic tokens (--primary, --surface, --text-primary…) are what components use.
+   Light and dark are two separately tuned palettes, not an inversion of each other.
+   Legacy aliases at the end of each block keep older class names working. */
 
 :root {
   color-scheme: light;
-  --font: 'Onest Variable', 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font: 'Onest Variable', 'Onest', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
 
-  /* palette */
-  --lime: #c8f250;
-  --lime-strong: #b4e330;
-  --lime-soft: #eef9d0;
-  --lime-ink: #1d3305;
-  --green: #22a052;
-  --green-strong: #178a43;
-  --green-deep: #0f5c36;
-  --forest: #0a3a25;
-  --graphite: #18211b;
+  /* ── brand ─────────────────────────────────────────── */
+  --brand-lime: #c8f36a;
+  --brand-green: #269b65;
+  --brand-forest: #174d38;
 
-  --bg: #f3f5f0;
-  --bg-elev: #f8faf6;
+  /* ── semantic: light ───────────────────────────────── */
+  --primary: #c8f36a;            /* accent fill: primary buttons, selected states */
+  --on-primary: #16300a;         /* text on accent fill */
+  --primary-soft: #eef8d6;       /* tinted backgrounds */
+  --secondary: #1f8a57;          /* brand green for text, icons, lines (AA on light) */
+  --secondary-soft: #e3f2e9;
+
+  --background: #f4f6f2;
   --surface: #ffffff;
-  --surface-2: #f2f5ef;
-  --surface-3: #e8ede4;
-  --text: #141c17;
-  --text-2: #56625a;
-  --text-3: #8a948c;
-  --border: rgb(20 28 23 / 0.08);
-  --border-strong: rgb(20 28 23 / 0.14);
-  --focus: #22a052;
+  --surface-2: #eef1eb;          /* secondary surface: inputs, rows, segments */
+  --surface-3: #e3e8df;          /* tracks, pressed states */
+  --surface-elevated: #ffffff;   /* sheets, menus */
+  --text-primary: #111813;
+  --text-secondary: #59645c;
+  --text-tertiary: #8b958d;
+  --border: #e2e7de;
+  --border-strong: #cfd6ca;
 
-  --positive: #1f9a4d;
-  --positive-soft: #e3f5e8;
-  --warn: #b7791f;
-  --warn-soft: #fbf0db;
-  --danger: #d93d42;
-  --danger-soft: #fbe5e5;
-  --info: #3b5d4a;
-  --info-soft: #e7eee9;
+  --success: #1f8a57;
+  --success-soft: #e3f2e9;
+  --warning: #a86d0f;
+  --warning-soft: #fbf0da;
+  --error: #c9474c;
+  --error-soft: #fbe7e7;
+  --info: #3d5a49;
+  --info-soft: #e9efeb;
+  --focus: #1f8a57;
 
-  /* charts */
-  --chart-dot: #9aa59d;
-  --chart-trend: #22a052;
-  --chart-forecast: #0f5c36;
-  --chart-band: rgb(200 242 80 / 0.35);
-  --chart-target: #8cc21c;
-  --chart-grid: rgb(20 28 23 / 0.06);
+  /* charts: measurements, average, trend, forecast, target */
+  --chart-actual: #a3ada5;
+  --chart-average: #8fbf3b;
+  --chart-trend: #1f8a57;
+  --chart-forecast: #174d38;
+  --chart-band: rgb(200 243 106 / 0.32);
+  --chart-target: #7aa82a;
+  --chart-grid: rgb(17 24 19 / 0.06);
+  --chart-series-2: #c26a2e;
+  --chart-series-3: #4f6fd8;
+  --chart-series-4: #a44fc2;
 
-  /* elevation */
-  --shadow-1: 0 1px 2px rgb(16 28 20 / 0.04), 0 1px 1px rgb(16 28 20 / 0.03);
-  --shadow-2: 0 8px 24px -10px rgb(16 40 24 / 0.16), 0 2px 6px rgb(16 28 20 / 0.04);
-  --shadow-3: 0 24px 60px -20px rgb(10 40 20 / 0.32), 0 8px 18px -8px rgb(10 30 20 / 0.12);
+  /* ── elevation (used sparingly) ────────────────────── */
+  --shadow-1: 0 1px 2px rgb(16 28 20 / 0.04);
+  --shadow-2: 0 10px 30px -14px rgb(16 40 24 / 0.22), 0 2px 6px rgb(16 28 20 / 0.04);
+  --shadow-3: 0 24px 60px -20px rgb(10 40 20 / 0.3), 0 8px 18px -8px rgb(10 30 20 / 0.1);
 
-  /* radii & spacing */
+  /* ── geometry ──────────────────────────────────────── */
   --r-xs: 8px;
   --r-sm: 12px;
-  --r-md: 18px;
-  --r-lg: 24px;
-  --r-xl: 32px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 24px;
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -64,75 +71,115 @@
   --s-6: 24px;
   --s-8: 32px;
   --s-10: 40px;
+  --s-12: 48px;
+  --control-h: 44px;
+  --control-h-sm: 34px;
+  --control-h-lg: 52px;
 
-  /* type scale */
-  --t-xs: 12px;
-  --t-sm: 13.5px;
-  --t-md: 15px;
+  /* ── type scale ────────────────────────────────────── */
+  --t-display: clamp(52px, 15vw, 68px); /* key metric */
+  --t-h1: clamp(26px, 6.8vw, 32px);     /* page title */
+  --t-h2: 19px;                         /* section title */
+  --t-h3: 16px;                         /* component title */
+  --t-body: 15px;
+  --t-secondary: 14px;
+  --t-caption: 12.5px;
+  /* legacy names */
+  --t-xs: var(--t-caption);
+  --t-sm: var(--t-secondary);
+  --t-md: var(--t-body);
   --t-lg: 17px;
-  --t-xl: 21px;
+  --t-xl: var(--t-h2);
   --t-2xl: 28px;
   --t-3xl: 36px;
-  --t-display: clamp(44px, 9vw, 64px);
 
+  /* ── motion ────────────────────────────────────────── */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.3, 1.25, 0.6, 1);
+  --dur-fast: 140ms;
   --dur: 220ms;
+  --dur-slow: 360ms;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --tabbar-h: 64px;
+  --content-max: 1180px;
 
-  /* Glisse (Liquid Glass) — tuned to the FORMA palette */
-  --lg-fill: var(--green);
-  --lg-on: var(--green);
-  --lg-foreground: rgb(14 22 17 / 0.9);
+  /* Glisse (Liquid Glass) */
+  --lg-fill: var(--secondary);
+  --lg-on: var(--secondary);
+  --lg-foreground: rgb(14 22 17 / 0.88);
+
+  /* ── legacy aliases ────────────────────────────────── */
+  --lime: var(--primary);
+  --lime-strong: #b7e554;
+  --lime-soft: var(--primary-soft);
+  --lime-ink: var(--on-primary);
+  --green: var(--secondary);
+  --green-strong: var(--secondary);
+  --green-deep: var(--brand-forest);
+  --forest: var(--brand-forest);
+  --bg: var(--background);
+  --bg-elev: var(--surface-elevated);
+  --text: var(--text-primary);
+  --text-2: var(--text-secondary);
+  --text-3: var(--text-tertiary);
+  --positive: var(--success);
+  --positive-soft: var(--success-soft);
+  --warn: var(--warning);
+  --warn-soft: var(--warning-soft);
+  --danger: var(--error);
+  --danger-soft: var(--error-soft);
+  --chart-dot: var(--chart-actual);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --lime: #cdf55c;
-  --lime-strong: #bdea3e;
-  --lime-soft: rgb(205 245 92 / 0.12);
-  --lime-ink: #142303;
-  --green: #45c36a;
-  --green-strong: #5bd27d;
-  --green-deep: #8fe0a6;
-  --forest: #0f2a1d;
+  --primary: #c8f36a;
+  --on-primary: #132406;
+  --primary-soft: rgb(200 243 106 / 0.12);
+  --secondary: #4cc489;
+  --secondary-soft: rgb(76 196 137 / 0.13);
 
-  --bg: #0b100d;
-  --bg-elev: #101612;
-  --surface: #141a16;
-  --surface-2: #1a221d;
-  --surface-3: #232d26;
-  --text: #edf2ee;
-  --text-2: #a5b0a8;
-  --text-3: #6f7a72;
-  --border: rgb(237 242 238 / 0.08);
-  --border-strong: rgb(237 242 238 / 0.15);
-  --focus: #cdf55c;
+  --background: #0b100d;
+  --surface: #141b16;
+  --surface-2: #1b241e;
+  --surface-3: #243028;
+  --surface-elevated: #18201a;
+  --text-primary: #f2f5f0;
+  --text-secondary: #a2aba3;
+  --text-tertiary: #737d75;
+  --border: #29332c;
+  --border-strong: #364239;
 
-  --positive: #57d07c;
-  --positive-soft: rgb(87 208 124 / 0.13);
-  --warn: #f0b54a;
-  --warn-soft: rgb(240 181 74 / 0.13);
-  --danger: #ff6b6f;
-  --danger-soft: rgb(255 107 111 / 0.13);
+  --success: #5fcf93;
+  --success-soft: rgb(95 207 147 / 0.13);
+  --warning: #e7b85c;
+  --warning-soft: rgb(231 184 92 / 0.13);
+  --error: #e47a7a;
+  --error-soft: rgb(228 122 122 / 0.14);
   --info: #a9c4b3;
-  --info-soft: rgb(169 196 179 / 0.1);
+  --info-soft: rgb(169 196 179 / 0.09);
+  --focus: #c8f36a;
 
-  --chart-dot: #5f6b63;
-  --chart-trend: #5bd27d;
-  --chart-forecast: #cdf55c;
-  --chart-band: rgb(205 245 92 / 0.12);
-  --chart-target: #cdf55c;
-  --chart-grid: rgb(237 242 238 / 0.06);
+  --chart-actual: #5d6a61;
+  --chart-average: #8fae5a;
+  --chart-trend: #4cc489;
+  --chart-forecast: #c8f36a;
+  --chart-band: rgb(200 243 106 / 0.1);
+  --chart-target: #c8f36a;
+  --chart-grid: rgb(242 245 240 / 0.06);
+  --chart-series-2: #e8955a;
+  --chart-series-3: #8aa2f2;
+  --chart-series-4: #cf8be6;
 
-  --shadow-1: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-2: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 10px 30px -12px rgb(0 0 0 / 0.6);
-  --shadow-3: 0 24px 60px -20px rgb(0 0 0 / 0.75);
+  --shadow-1: none;
+  --shadow-2: 0 12px 32px -14px rgb(0 0 0 / 0.7);
+  --shadow-3: 0 24px 60px -20px rgb(0 0 0 / 0.8);
 
-  --lg-foreground: rgb(255 255 255 / 0.94);
+  --lg-foreground: rgb(255 255 255 / 0.92);
+  --lime-strong: #b8e650;
 }

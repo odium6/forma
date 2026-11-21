@@ -11,7 +11,6 @@ import { fmtKg, fmtNum, fmtSigned, nDays } from '@/lib/format';
 import { WeightChart } from '@/features/charts/WeightChart';
 import { useOpenEntry } from '@/features/entry/EntrySheet';
 import { Icon } from '@/ui/Icon';
-import { ProgressRing } from '@/ui/controls';
 import type { AppData } from '@/domain/types';
 import type { IconName } from '@/ui/Icon';
 import type { ThemeMode } from '@/domain/types';
@@ -31,19 +30,23 @@ function greeting(): string {
   return 'Добрый вечер';
 }
 
+function ago(days: number): string {
+  return days === 0 ? 'сегодня' : days === 1 ? 'вчера' : `${nDays(days)} назад`;
+}
+
 export function HomePage() {
   const data = useData();
   const nav = useNavigate();
   const openEntry = useOpenEntry();
   const s = useMemo(() => computeSummary(data), [data]);
-  const insights = useMemo(() => visibleInsights(data, undefined, 4), [data]);
+  const insights = useMemo(() => visibleInsights(data, undefined, 3), [data]);
 
   return (
     <div className="page home">
-      <header className="page-head">
+      <header className="page-head home-head">
         <div className="grow">
-          <p className="muted small">{formatDate(today(), { weekday: true })}</p>
-          <h1>
+          <p className="t-caption">{formatDate(today(), { weekday: true })}</p>
+          <h1 className="home-greet">
             {greeting()}
             {data.profile?.name ? `, ${data.profile.name}` : ''}
           </h1>
@@ -68,26 +71,22 @@ export function HomePage() {
       <div className="dash">
         <div className="col">
           <HeroCard s={s} />
-          <section className="card" aria-labelledby="chart-h">
-            <div className="card-head">
-              <h2 id="chart-h">Динамика веса</h2>
-              <Link to="/progress" className="small strong">Подробнее</Link>
-            </div>
-            {s.points.length ? (
-              <WeightChart data={data} summary={s} height={240} />
-            ) : (
-              <div className="empty">
-                <p className="small">График появится после первого измерения.</p>
-                <button className="btn primary" onClick={() => openEntry()}>Внести вес</button>
+          {s.points.length > 0 && <QuickStats s={s} />}
+          {s.points.length > 0 && (
+            <section className="card" aria-labelledby="chart-h">
+              <div className="card-head">
+                <h2 id="chart-h">Динамика веса</h2>
+                <Link to="/progress">Подробнее</Link>
               </div>
-            )}
-          </section>
+              <WeightChart data={data} summary={s} height={220} />
+            </section>
+          )}
         </div>
         <div className="col">
           <TodayCard data={data} />
           {insights.length > 0 && (
-            <section className="card" aria-labelledby="ins-h">
-              <div className="card-head">
+            <section className="section" aria-labelledby="ins-h">
+              <div className="section-head">
                 <h2 id="ins-h">Наблюдения</h2>
               </div>
               <ul className="insights">
@@ -111,109 +110,151 @@ function HeroCard({ s }: { s: Summary }) {
   const openEntry = useOpenEntry();
   const status = STATUS_TEXT[s.status];
   const f = s.forecast;
-  const latestAge = s.latest ? diffDays(today(), s.latest.date) : null;
 
   if (!s.points.length) {
     return (
       <section className="card hero hero-empty">
-        <div className="eyebrow">Стартовая точка</div>
+        <span className="empty-art"><Icon name="scale" size={26} /></span>
         <h2>Внеси первый вес</h2>
-        <p className="muted">FORMA построит тренд, рассчитает прогресс и прогноз по твоим реальным измерениям.</p>
-        <button className="btn primary lg" onClick={() => openEntry()}>
-          <Icon name="plus" size={20} /> Внести данные
+        <p className="muted">FORMA построит тренд, покажет путь к цели и прогноз по твоим реальным измерениям.</p>
+        <button className="btn primary lg" onClick={() => openEntry({ focus: 'weight' })}>
+          <Icon name="plus" size={20} /> Внести вес
         </button>
       </section>
     );
   }
 
   const m = s.maintenance;
+  const g = s.goal;
+  const fromStart = g ? s.current! - g.startWeight : null;
   const pct = s.progress ? Math.round(s.progress.fraction * 100) : null;
 
   return (
     <section className="card hero" aria-label="Прогресс к цели">
       <div className="hero-top">
+        <span className="t-caption">Текущий вес · тренд</span>
         <span className={`badge ${status.tone === 'positive' ? 'positive' : status.tone === 'warn' ? 'warn' : ''}`} data-testid="status">
           {status.title}
         </span>
-        {s.goal?.targetDate && !m && <span className="small muted">Срок: {formatDate(s.goal.targetDate)}</span>}
       </div>
-      <div className="hero-main">
-        {m ? (
-          <MaintenanceBand s={s} />
+      <div className="hero-value">
+        <span className="t-display num" data-testid="current-weight">{fmtNum(s.current!, 2)}</span>
+        <span className="hero-unit">кг</span>
+      </div>
+      <p className="hero-delta">
+        {fromStart != null && !m ? (
+          <>
+            <span className="num strong">{fmtSigned(fromStart, 2, 'кг')}</span> от старта
+            {pct != null && (
+              <>
+                {' · '}
+                <span className="num strong accent">{pct}%</span> пути
+              </>
+            )}
+          </>
         ) : (
-          <ProgressRing value={s.progress?.fraction ?? 0} size={176} label={pct != null ? `Выполнено ${pct}% цели` : 'Цель не задана'}>
-            <div className="ring-value num" data-testid="current-weight">{fmtNum(s.current!, 2)}</div>
-            <div className="ring-unit">кг · тренд</div>
-            {pct != null && <div className="ring-pct num">{pct}%</div>}
-          </ProgressRing>
+          <>
+            Последнее измерение: <span className="num strong">{fmtKg(s.latest!.value)}</span>, {ago(diffDays(today(), s.latest!.date))}
+          </>
         )}
-        <dl className="hero-stats">
-          <div>
-            <dt>Последнее</dt>
-            <dd className="num">
-              {fmtKg(s.latest!.value)}
-              <span className="faint xs">{latestAge === 0 ? ' сегодня' : latestAge === 1 ? ' вчера' : ` ${nDays(latestAge!)} назад`}</span>
-            </dd>
-          </div>
-          {m ? (
-            <div>
-              <dt>Диапазон</dt>
-              <dd className="num">{fmtNum(m.low, 2)}–{fmtNum(m.high, 2)} кг</dd>
-            </div>
-          ) : s.target != null ? (
-            <>
-              <div>
-                <dt>Цель</dt>
-                <dd className="num">{fmtKg(s.target)}</dd>
-              </div>
-              <div>
-                <dt>Осталось</dt>
-                <dd className="num" data-testid="left-kg">{s.progress?.state === 'reached' ? 'Достигнута' : fmtKg(s.progress?.leftKg ?? Math.abs(s.target - s.current!))}</dd>
-              </div>
-            </>
-          ) : (
-            <div>
-              <dt>Цель</dt>
-              <dd><Link to="/settings#goal">Задать</Link></dd>
-            </div>
-          )}
-          <div>
-            <dt>7 дней</dt>
-            <dd className="num">{s.change7 == null ? <span className="faint">мало данных</span> : fmtSigned(s.change7, 2, 'кг')}</dd>
-          </div>
-          <div>
-            <dt>30 дней</dt>
-            <dd className="num">{s.change30 == null ? <span className="faint">мало данных</span> : fmtSigned(s.change30, 2, 'кг')}</dd>
-          </div>
-        </dl>
-      </div>
+      </p>
+
+      {m ? (
+        <MaintenanceBand s={s} />
+      ) : g && s.target != null && s.progress ? (
+        <Journey start={g.startWeight} target={s.target} fraction={s.progress.fraction} left={s.progress.leftKg} reached={s.progress.state === 'reached'} />
+      ) : (
+        <Link to="/progress#goal" className="hero-goal-cta">
+          <Icon name="target" size={18} />
+          <span className="grow">Задай цель, чтобы видеть путь и прогноз</span>
+          <Icon name="right" size={16} />
+        </Link>
+      )}
+
       {!m && s.target != null && (
         <div className="forecast" data-testid="forecast">
-          <Icon name="target" size={18} />
-          <div className="grow small">
+          <Icon name="clock" size={17} />
+          <div className="grow">
             {f.status === 'ok' && f.date ? (
               <>
-                Прогноз достижения: <strong>{formatDate(f.date)}</strong>
-                <span className="muted"> · вероятно, {formatDate(f.early!)} — {f.late ? formatDate(f.late) : 'позже'}</span>
+                Прогноз: <strong>{formatDate(f.date)}</strong>
+                <span className="faint"> · вероятно {formatDate(f.early!)} — {f.late ? formatDate(f.late) : 'позже'}</span>
               </>
             ) : f.status === 'insufficient' ? (
-              <>Прогноз появится, когда будет больше данных{f.needPoints > 0 ? `: ещё ${f.needPoints} измер.` : ''}{f.needSpanDays > 0 ? `${f.needPoints > 0 ? ' и' : ':'} ${nDays(f.needSpanDays)} наблюдений` : ''}.</>
+              <>
+                Прогноз появится, когда будет больше данных{f.needPoints > 0 ? `: ещё ${f.needPoints} измер.` : ''}
+                {f.needSpanDays > 0 ? `${f.needPoints > 0 ? ' и' : ':'} ${nDays(f.needSpanDays)} наблюдений` : ''}.
+              </>
             ) : f.status === 'reached' || s.progress?.state === 'reached' ? (
-              <>Тренд достиг цели. Можно перейти в режим поддержания в настройках цели.</>
+              <>Тренд достиг цели. Можно перейти в режим поддержания.</>
             ) : f.status === 'away' ? (
-              <>Сейчас тренд направлен от цели, поэтому дату не прогнозируем.</>
+              <>Сейчас тренд направлен от цели — дату не прогнозируем.</>
             ) : f.status === 'flat' ? (
-              <>Тренд стабилен — при текущей динамике дату достижения не определить.</>
+              <>Тренд стабилен — дату достижения пока не определить.</>
             ) : (
-              <>При текущем темпе цель дальше, чем на 3 года — дату не показываем.</>
+              <>При текущем темпе цель дальше, чем на 3 года.</>
             )}
           </div>
         </div>
       )}
       {s.progress?.state === 'regressed' && (
-        <p className="small muted">Сейчас вес дальше от цели, чем на старте. Прогресс не уходит в минус — шкала покажет движение, как только тренд развернётся.</p>
+        <p className="small muted">Сейчас вес дальше от цели, чем на старте. Шкала покажет движение, как только тренд развернётся.</p>
       )}
     </section>
+  );
+}
+
+/** Horizontal scale from the start weight to the target with the current position. */
+function Journey({ start, target, fraction, left, reached }: { start: number; target: number; fraction: number; left: number; reached: boolean }) {
+  const pct = Math.round(fraction * 1000) / 10;
+  return (
+    <div className="journey">
+      <div
+        className="journey-track"
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+        aria-label={`Пройдено ${Math.round(pct)}% пути от ${fmtKg(start)} до ${fmtKg(target)}`}
+      >
+        <span className="journey-fill" style={{ width: `${pct}%` }} />
+        <span className="journey-pin" style={{ left: `${pct}%` }} />
+      </div>
+      <div className="journey-labels">
+        <span>
+          <span className="t-caption">Старт</span>
+          <span className="num">{fmtKg(start)}</span>
+        </span>
+        <span className="journey-left">
+          <span className="t-caption">Осталось</span>
+          <span className="num strong" data-testid="left-kg">{reached ? 'Достигнута' : fmtKg(left)}</span>
+        </span>
+        <span className="end">
+          <span className="t-caption">Цель</span>
+          <span className="num">{fmtKg(target)}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function QuickStats({ s }: { s: Summary }) {
+  const tile = (label: string, v: number | null) => (
+    <div className="qstat">
+      <span className="t-caption">{label}</span>
+      {v == null ? <span className="qstat-empty">Недостаточно данных</span> : <span className="qstat-value num">{fmtSigned(v, 2, 'кг')}</span>}
+    </div>
+  );
+  return (
+    <div className="qstats" aria-label="Краткая аналитика">
+      {tile('За 7 дней', s.change7)}
+      {tile('За 30 дней', s.change30)}
+      <div className="qstat">
+        <span className="t-caption">Последнее</span>
+        <span className="qstat-value num">{fmtKg(s.latest!.value)}</span>
+        <span className="qstat-sub">{ago(diffDays(today(), s.latest!.date))}</span>
+      </div>
+    </div>
   );
 }
 
@@ -224,15 +265,20 @@ function MaintenanceBand({ s }: { s: Summary }) {
   const hi = m.high + span;
   const pos = Math.max(0, Math.min(1, (s.current! - lo) / (hi - lo)));
   return (
-    <div className="mband" role="img" aria-label={`Текущий вес ${fmtNum(s.current!, 2)} кг, диапазон ${fmtNum(m.low, 2)}–${fmtNum(m.high, 2)} кг`}>
-      <div className="ring-value num">{fmtNum(s.current!, 2)}</div>
-      <div className="ring-unit">кг · тренд</div>
-      <div className="mband-track">
+    <div className="journey" role="img" aria-label={`Текущий вес ${fmtNum(s.current!, 2)} кг, диапазон ${fmtNum(m.low, 2)}–${fmtNum(m.high, 2)} кг`}>
+      <div className="journey-track">
         <span className="mband-zone" />
-        <span className="mband-pin" style={{ left: `${pos * 100}%` }} />
+        <span className="journey-pin" style={{ left: `${pos * 100}%` }} />
       </div>
-      <div className="small muted">
-        {m.state === 'inside' ? 'Внутри целевого диапазона' : `${m.state === 'above' ? 'Выше' : 'Ниже'} диапазона на ${fmtKg(Math.abs(m.deviation))}`}
+      <div className="journey-labels">
+        <span>
+          <span className="t-caption">Диапазон</span>
+          <span className="num">{fmtNum(m.low, 2)}–{fmtNum(m.high, 2)} кг</span>
+        </span>
+        <span className="end">
+          <span className="t-caption">Сейчас</span>
+          <span className="num strong">{m.state === 'inside' ? 'внутри' : `${m.state === 'above' ? 'выше' : 'ниже'} на ${fmtKg(Math.abs(m.deviation))}`}</span>
+        </span>
       </div>
     </div>
   );
@@ -244,23 +290,28 @@ function TodayCard({ data }: { data: AppData }) {
   const weighed = data.entries.some((e) => e.date === d && e.weight != null);
   const idx = indexLogs(data.habitLogs);
   const habits = data.habits.filter((h) => !h.archivedAt).map((h) => ({ h, s: habitStats(h, idx, d) })).filter((x) => x.s.todayScheduled);
-  const done = habits.filter((x) => x.s.todayDone).length;
-  const newAch = data.achievements.filter((a) => diffDays(d, a.date) <= 1).length;
+  const total = habits.length + 1;
+  const done = habits.filter((x) => x.s.todayDone).length + (weighed ? 1 : 0);
 
   return (
     <section className="card" aria-labelledby="today-h">
       <div className="card-head">
         <h2 id="today-h">Сегодня</h2>
-        {habits.length > 0 && <span className="badge num">{done}/{habits.length}</span>}
+        <span className="today-count num" aria-label={`Выполнено ${done} из ${total}`}>
+          {done}/{total}
+        </span>
       </div>
-      <div className="list">
-        <button className="list-item" onClick={() => openEntry()}>
-          <span className={`check-dot ${weighed ? 'on' : ''}`}>{weighed && <Icon name="check" size={16} strokeWidth={2.6} />}</span>
-          <span className="grow">{weighed ? 'Вес внесён' : 'Внести вес'}</span>
-          <Icon name="right" size={18} className="faint" />
-        </button>
-        {habits.slice(0, 6).map(({ h, s }) => (
-          <div key={h.id} className="list-item">
+      <div className="list today-list">
+        <div className={`list-item today-row${weighed ? ' done' : ''}`}>
+          <button className={`check-dot ${weighed ? 'on' : ''}`} aria-label={weighed ? 'Вес внесён. Внести ещё' : 'Внести вес'} onClick={() => openEntry({ focus: 'weight' })}>
+            {weighed && <Icon name="check" size={15} strokeWidth={2.6} />}
+          </button>
+          <button className="today-name" onClick={() => openEntry({ focus: 'weight' })}>
+            <Icon name="scale" size={17} className="today-ico" /> Взвешивание
+          </button>
+        </div>
+        {habits.map(({ h, s }) => (
+          <div key={h.id} className={`list-item today-row${s.todayDone ? ' done' : ''}`}>
             <button
               className={`check-dot ${s.todayDone ? 'on' : ''}`}
               aria-label={`${h.name}: ${s.todayDone ? 'снять отметку' : 'отметить выполнение'}`}
@@ -271,31 +322,25 @@ function TodayCard({ data }: { data: AppData }) {
                 else void setHabitLog(h.id, d, isDoneValue(h, s.todayValue) ? null : 0);
               }}
             >
-              {s.todayDone && <Icon name="check" size={16} strokeWidth={2.6} />}
+              {s.todayDone && <Icon name="check" size={15} strokeWidth={2.6} />}
             </button>
-            <span className="grow">
-              <span aria-hidden="true">{h.icon} </span>
-              {h.name}
-            </span>
-            {s.current > 0 && (
-              <span className="streak small num" title="Серия">
-                <Icon name="flame" size={15} /> {s.current}
+            <Link to="/habits" className="today-name">
+              <span aria-hidden="true" className="today-emoji">{h.icon}</span> {h.name}
+            </Link>
+            {s.current > 1 && (
+              <span className="t-caption num" title="Дней подряд">
+                {s.current} дн.
               </span>
             )}
           </div>
         ))}
         {habits.length === 0 && (
-          <Link to="/habits" className="list-item">
-            <span className="check-dot" />
+          <Link to="/habits" className="list-item today-row">
+            <span className="check-dot add">
+              <Icon name="plus" size={14} />
+            </span>
             <span className="grow muted">Добавить привычку</span>
-            <Icon name="right" size={18} className="faint" />
-          </Link>
-        )}
-        {newAch > 0 && (
-          <Link to="/achievements" className="list-item">
-            <span className="list-icon">🏅</span>
-            <span className="grow">Новых достижений: {newAch}</span>
-            <Icon name="right" size={18} className="faint" />
+            <Icon name="right" size={16} className="chev" />
           </Link>
         )}
       </div>
@@ -307,22 +352,20 @@ function RecentAchievements({ data }: { data: AppData }) {
   const recent = [...data.achievements].sort((a, b) => b.date.localeCompare(a.date) || b.unlockedAt - a.unlockedAt).slice(0, 3);
   if (!recent.length) return null;
   return (
-    <section className="card" aria-labelledby="ach-h">
-      <div className="card-head">
-        <h2 id="ach-h">Последние достижения</h2>
-        <Link to="/achievements" className="small strong">Все</Link>
+    <section className="section" aria-labelledby="ach-h">
+      <div className="section-head">
+        <h2 id="ach-h">Достижения</h2>
+        <Link to="/achievements">Все</Link>
       </div>
-      <div className="list">
+      <div className="ach-strip">
         {recent.map((a) => {
           const def = ACHIEVEMENTS.find((x) => x.id === a.id);
           if (!def) return null;
           return (
-            <div key={a.id} className="list-item">
-              <span className="list-icon">{def.icon}</span>
-              <span className="grow">
-                <span className="strong">{def.title}</span>
-                <span className="small muted" style={{ display: 'block' }}>{formatDate(a.date)}</span>
-              </span>
+            <div key={a.id} className="ach-mini">
+              <span className="ach-mini-icon" aria-hidden="true">{def.icon}</span>
+              <span className="ach-mini-title">{def.title}</span>
+              <span className="t-caption">{formatDate(a.date)}</span>
             </div>
           );
         })}

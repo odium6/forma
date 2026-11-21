@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/app/Layout';
 import { addCustomMetric, deleteCustomMetric, deleteEntry, addEntry, useData } from '@/state/store';
 import { computeSummary } from '@/lib/summary';
@@ -24,7 +24,7 @@ export default function ProgressPage() {
   const [tab, setTab] = useState<Tab>('weight');
   return (
     <div className="page">
-      <PageHeader title="Прогресс" subtitle="Вес, тело и вся история измерений" />
+      <PageHeader title="Прогресс" />
       <Segmented
         label="Раздел прогресса"
         value={tab}
@@ -65,13 +65,20 @@ function WeightTab({ data }: { data: AppData }) {
         </section>
         <section className="card">
           <div className="card-head"><h2>Тренды</h2></div>
-          <div className="stat-grid">
-            <Stat label="Среднее за 7 дней" value={last7.length >= 3 ? fmtKg(mean(last7)) : null} hint={last7.length >= 3 ? `${last7.length} измер.` : 'нужно ≥ 3 измерений'} />
-            <Stat label="Тренд 14 дней" value={t14 ? `${fmtSigned(t14.slope * 7, 2)} кг/нед` : null} hint={t14 ? `${t14.n} измер.` : 'мало данных'} />
-            <Stat label="Тренд 30 дней" value={t30 ? `${fmtSigned(t30.slope * 7, 2)} кг/нед` : null} hint={t30 ? `${t30.n} измер.` : 'мало данных'} />
-            <Stat label="Долгосрочно (90 дн.)" value={t90 ? `${fmtSigned(t90.slope * 30, 2)} кг/мес` : null} hint={t90 ? `${t90.n} измер.` : 'нужно 45+ дней наблюдений'} />
-            <Stat label="Минимум" value={fmtKg(Math.min(...values))} hint={formatDate(s.points[values.indexOf(Math.min(...values))].date)} />
-            <Stat label="Максимум" value={fmtKg(Math.max(...values))} hint={formatDate(s.points[values.indexOf(Math.max(...values))].date)} />
+          <div className="trend-groups">
+            <TrendGroup title="Краткосрочно">
+              <TrendRow label="Среднее за 7 дней" value={last7.length >= 3 ? fmtKg(mean(last7)) : null} need="нужно 3 измерения за неделю" />
+              <TrendRow label="Темп за 14 дней" value={t14 ? `${fmtSigned(t14.slope * 7, 2)} кг/нед` : null} need="нужно 4 измерения за 7+ дней" />
+            </TrendGroup>
+            <TrendGroup title="Среднесрочно">
+              <TrendRow label="Темп за 30 дней" value={t30 ? `${fmtSigned(t30.slope * 7, 2)} кг/нед` : null} need="нужно 6 измерений за 14+ дней" />
+              <TrendRow label="Изменение тренда за 30 дней" value={s.change30 != null ? fmtSigned(s.change30, 2, 'кг') : null} need="нужно больше данных за месяц" />
+            </TrendGroup>
+            <TrendGroup title="Долгосрочно">
+              <TrendRow label="Темп за 90 дней" value={t90 ? `${fmtSigned(t90.slope * 30, 2)} кг/мес` : null} need="нужно 10 измерений за 45+ дней" />
+              <TrendRow label="Минимум" value={fmtKg(Math.min(...values))} hint={formatDate(s.points[values.indexOf(Math.min(...values))].date)} />
+              <TrendRow label="Максимум" value={fmtKg(Math.max(...values))} hint={formatDate(s.points[values.indexOf(Math.max(...values))].date)} />
+            </TrendGroup>
           </div>
         </section>
       </div>
@@ -95,12 +102,23 @@ function WeightTab({ data }: { data: AppData }) {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string | null; hint?: string }) {
+function TrendGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="stat">
-      <div className="stat-label">{label}</div>
-      <div className={`stat-value num ${value == null ? 'faint' : ''}`}>{value ?? '—'}</div>
-      {hint && <div className="stat-hint">{hint}</div>}
+    <div className="trend-group">
+      <div className="group-title">{title}</div>
+      <div className="list">{children}</div>
+    </div>
+  );
+}
+
+function TrendRow({ label, value, hint, need }: { label: string; value: string | null; hint?: string; need?: string }) {
+  return (
+    <div className="list-item trend-row">
+      <span className="list-text">
+        <span>{label}</span>
+        {(hint || (value == null && need)) && <span className="list-sub">{value == null ? need : hint}</span>}
+      </span>
+      <span className={`num strong ${value == null ? 'faint' : ''}`}>{value ?? 'мало данных'}</span>
     </div>
   );
 }
@@ -126,14 +144,37 @@ function BodyTab({ data }: { data: AppData }) {
 
   return (
     <div className="stack">
+      {withData.length > 0 && (
+        <section className="card tight">
+          <div className="body-head" aria-hidden="true">
+            <span>Параметр</span>
+            <span>Первое</span>
+            <span>Сейчас</span>
+            <span>Изм.</span>
+          </div>
+          <div className="list" role="list" aria-label="Параметры тела">
+            {withData.map((k) => {
+              const ps = dailySeries(data.entries, k);
+              const first = ps[0].value;
+              const last = ps[ps.length - 1].value;
+              const u = label(k).unit;
+              return (
+                <button key={k} role="listitem" className={`list-item body-row${k === key ? ' on' : ''}`} aria-pressed={k === key} onClick={() => setKey(k)}>
+                  <span className="body-name">{label(k).label}</span>
+                  <span className="num faint">{fmtNum(first, 2)}</span>
+                  <span className="num strong">{fmtNum(last, 2)}</span>
+                  <span className="num body-delta">{ps.length > 1 ? fmtSigned(last - first, 2, u) : '—'}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       <section className="card">
-        <ChipGroup
-          label="Параметр"
-          value={key}
-          onChange={(v) => setKey(v as SeriesKey)}
-          options={keys.map((k) => ({ value: k, label: withData.includes(k) ? label(k).label : <span style={{ opacity: 0.55 }}>{label(k).label}</span> }))}
-        />
-        <div className="row between wrap" style={{ marginTop: 16 }}>
+        {withData.length === 0 && (
+          <ChipGroup label="Параметр" value={key} onChange={(v) => setKey(v as SeriesKey)} options={keys.map((k) => ({ value: k, label: label(k).label }))} />
+        )}
+        <div className="row between wrap">
           <div>
             <h2>{label(key).label}</h2>
             {visible.length > 0 ? (
@@ -247,7 +288,7 @@ function AddMetricSheet({ open, onClose, onAdd }: { open: boolean; onClose: () =
   );
 }
 
-const COMPARE_COLORS = ['var(--chart-trend)', '#e8772e', '#5b7cfa', '#c04fd8', '#d9a400', '#2fb5b5'];
+const COMPARE_COLORS = ['var(--chart-trend)', 'var(--chart-series-2)', 'var(--chart-series-3)', 'var(--chart-series-4)', 'var(--warning)', 'var(--chart-average)'];
 
 function CompareTab({ data }: { data: AppData }) {
   const keys = (['weight', 'bodyFat', ...allMetricKeys(data.customMetrics)] as SeriesKey[]).filter((k) => dailySeries(data.entries, k).length > 1);
@@ -273,6 +314,39 @@ function CompareTab({ data }: { data: AppData }) {
       <LineChart ariaLabel="Сравнение изменения параметров в процентах" from={from} to={dayNumber(today())} unit="%" height={300} series={series} formatValue={(v) => `${fmtSigned(v, 2)}%`} />
       <ChartLegend items={series.map((s) => ({ label: s.label, color: s.color, style: 'line' }))} />
       <p className="small muted">Каждая линия — изменение параметра в процентах от первого значения в выбранном периоде. Так вес и обхваты можно сравнивать на одной шкале.</p>
+      <div className="table-wrap">
+        <table className="table cmp-table">
+          <thead>
+            <tr>
+              <th>Параметр</th>
+              <th className="num-col">Начало</th>
+              <th className="num-col">Сейчас</th>
+              <th className="num-col">Изменение</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sel.map((k, i) => {
+              const pts = dailySeries(data.entries, k).filter((p) => p.day >= from);
+              if (pts.length < 2) return null;
+              const a = pts[0].value;
+              const b = pts[pts.length - 1].value;
+              const unit = k === 'weight' ? 'кг' : k === 'bodyFat' ? '%' : metricLabel(k, data.customMetrics).unit;
+              const d = b - a;
+              return (
+                <tr key={k}>
+                  <td><span className="cmp-swatch" style={{ background: COMPARE_COLORS[i % COMPARE_COLORS.length] }} /> {label(k)}</td>
+                  <td className="num num-col">{fmtNum(a, 2)}</td>
+                  <td className="num num-col strong">{fmtNum(b, 2)}</td>
+                  <td className="num num-col">
+                    <span className="dir" aria-hidden="true">{Math.abs(d) < 0.005 ? '→' : d < 0 ? '↓' : '↑'}</span> {fmtSigned(d, 2, unit)}
+                    <span className="faint xs"> ({fmtSigned((d / a) * 100, 2)}%)</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -280,12 +354,12 @@ function CompareTab({ data }: { data: AppData }) {
 function HistoryTab({ data }: { data: AppData }) {
   const openEntry = useOpenEntry();
   const { confirm, toast } = useFeedback();
-  const [limit, setLimit] = useState(60);
+  const [limit, setLimit] = useState(90);
   const rows = [...data.entries].reverse();
   const measLabel = (e: Entry) =>
-    Object.entries(e.measurements)
-      .map(([k, v]) => `${metricLabel(k, data.customMetrics).label} ${fmtNum(v!, 2)}`)
-      .join(', ');
+    [e.bodyFat != null ? `жир ${fmtNum(e.bodyFat, 2)}%` : '', ...Object.entries(e.measurements).map(([k, v]) => `${metricLabel(k, data.customMetrics).label.toLowerCase()} ${fmtNum(v!, 2)}`)]
+      .filter(Boolean)
+      .join(' · ');
 
   if (!rows.length) return <EmptyState icon="note" title="История пуста" text="Здесь появятся все внесённые записи." />;
 
@@ -295,54 +369,52 @@ function HistoryTab({ data }: { data: AppData }) {
     toast('Запись удалена', { action: { label: 'Вернуть', run: () => void addEntry({ date: e.date, time: e.time, weight: e.weight, bodyFat: e.bodyFat, measurements: e.measurements, note: e.note, source: e.source }) } });
   };
 
+  const groups: { month: string; items: Entry[] }[] = [];
+  for (const e of rows.slice(0, limit)) {
+    const m = e.date.slice(0, 7);
+    if (groups[groups.length - 1]?.month !== m) groups.push({ month: m, items: [] });
+    groups[groups.length - 1].items.push(e);
+  }
+  const monthTitle = (m: string) => {
+    const t = new Date(`${m}-15T12:00:00`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(' г.', '');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+
   return (
-    <section className="card history">
-      <div className="card-head">
-        <h2>Все записи</h2>
-        <span className="badge num">{rows.length}</span>
-      </div>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Дата</th>
-              <th>Вес</th>
-              <th className="hide-sm">Жир</th>
-              <th className="hide-sm">Измерения</th>
-              <th className="hide-sm">Заметка</th>
-              <th aria-label="Действия" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(0, limit).map((e) => (
-              <tr key={e.id}>
-                <td>
-                  <div className="strong">{formatDate(e.date)}</div>
-                  <div className="xs faint num">{e.time}</div>
-                </td>
-                <td className="num strong">{e.weight != null ? fmtNum(e.weight, 2) : '—'}</td>
-                <td className="num hide-sm">{e.bodyFat != null ? `${fmtNum(e.bodyFat, 2)}%` : '—'}</td>
-                <td className="hide-sm small muted clip">{measLabel(e) || '—'}</td>
-                <td className="hide-sm small muted clip">{e.note || '—'}</td>
-                <td className="actions">
-                  <button className="btn icon sm ghost" aria-label="Редактировать" onClick={() => openEntry({ entryId: e.id })}>
-                    <Icon name="edit" size={17} />
+    <div className="stack history">
+      <p className="small muted">Записей: <span className="num strong">{rows.length}</span>. Нажми на запись, чтобы открыть и изменить её.</p>
+      {groups.map((g) => (
+        <section key={g.month} className="section">
+          <h2 className="group-title">{monthTitle(g.month)}</h2>
+          <div className="group" role="list">
+            {g.items.map((e) => {
+              const extra = measLabel(e);
+              return (
+                <div key={e.id} className="list-item hist-row" role="listitem" data-testid="history-row">
+                  <button className="hist-main" onClick={() => openEntry({ entryId: e.id })} aria-label={`Открыть запись от ${formatDate(e.date)}, ${e.time}`}>
+                    <span className="hist-date">
+                      <span className="strong">{formatDate(e.date)}</span>
+                      <span className="xs faint num">{e.time}</span>
+                    </span>
+                    <span className="list-text">
+                      <span className="num strong">{e.weight != null ? fmtKg(e.weight) : e.note ? 'Заметка' : '—'}</span>
+                      {(extra || e.note) && <span className="list-sub hist-extra">{[extra, e.note].filter(Boolean).join(' · ')}</span>}
+                    </span>
                   </button>
                   <button className="btn icon sm ghost" aria-label="Удалить" onClick={() => remove(e)}>
                     <Icon name="trash" size={17} />
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
       {rows.length > limit && (
-        <button className="btn block" style={{ marginTop: 12 }} onClick={() => setLimit(limit + 100)}>
+        <button className="btn block" onClick={() => setLimit(limit + 150)}>
           Показать ещё
         </button>
       )}
-    </section>
+    </div>
   );
 }
-

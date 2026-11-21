@@ -102,6 +102,7 @@ function Shell() {
             <Route path="/achievements" element={<AchievementsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/:section" element={<SettingsPage />} />
             <Route path="/more" element={<MorePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

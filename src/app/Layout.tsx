@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
-import { Button, Menu, TabBar } from 'glisse';
+import { Menu, TabBar } from 'glisse';
 import { Icon, type IconName } from '@/ui/Icon';
 import { Logo } from '@/ui/Logo';
 import { useOpenEntry } from '@/features/entry/EntrySheet';
 import { saveSettings, useData } from '@/state/store';
+import { Sheet } from '@/ui/Sheet';
 import type { ThemeMode } from '@/domain/types';
 import './layout.css';
 
@@ -57,6 +58,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const nav = useNavigate();
   const openEntry = useOpenEntry();
   const desktop = useIsDesktop();
+  const [addOpen, setAddOpen] = useState(false);
+  const fabHidden = useHideOnScroll();
 
   const mobileItems = NAV.filter((n) => n.mobile);
   const inMobile = mobileItems.some((n) => n.to === loc.pathname);
@@ -73,7 +76,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <div className="sidebar-top">
             <Logo size={30} />
           </div>
-          <button className="btn primary block lg" onClick={() => openEntry()} data-testid="add-entry">
+          <button className="btn primary block lg" onClick={() => setAddOpen(true)} data-testid="add-entry">
             <Icon name="plus" size={20} /> Внести данные
           </button>
           <nav className="side-nav" aria-label="Разделы">
@@ -96,21 +99,11 @@ export function Layout({ children }: { children: ReactNode }) {
       {!desktop && (
         <>
           {loc.pathname === '/' && (
-          <div className="fab-wrap">
-            <Button
-              className="fab"
-              aria-label="Внести данные"
-              data-testid="add-entry"
-              icon={
-                <span className="fab-icon">
-                  <Icon name="plus" size={20} strokeWidth={2.4} />
-                </span>
-              }
-              onClick={() => openEntry()}
-            >
-              Внести данные
-            </Button>
-          </div>
+            <div className={`fab-wrap${fabHidden ? ' hidden' : ''}`}>
+              <button className="fab" aria-label="Внести данные" data-testid="add-entry" onClick={() => setAddOpen(true)}>
+                <Icon name="plus" size={26} strokeWidth={2.4} />
+              </button>
+            </div>
           )}
           <nav className="tabbar-wrap" aria-label="Основная навигация">
             <TabBar
@@ -125,8 +118,58 @@ export function Layout({ children }: { children: ReactNode }) {
           </nav>
         </>
       )}
+      <AddSheet
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onPick={(focus) => {
+          setAddOpen(false);
+          openEntry({ focus });
+        }}
+      />
     </div>
   );
+}
+
+const ADD_ACTIONS: { focus: 'weight' | 'measurements' | 'note'; icon: IconName; title: string; sub: string; testId: string }[] = [
+  { focus: 'weight', icon: 'scale', title: 'Вес', sub: 'Утреннее взвешивание', testId: 'add-weight' },
+  { focus: 'measurements', icon: 'ruler', title: 'Параметры тела', sub: 'Обхваты и процент жира', testId: 'add-body' },
+  { focus: 'note', icon: 'note', title: 'Заметка', sub: 'Сон, самочувствие, тренировка', testId: 'add-note' },
+];
+
+function AddSheet({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (f: 'weight' | 'measurements' | 'note') => void }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Внести данные" size="sm">
+      <div className="list add-actions">
+        {ADD_ACTIONS.map((a) => (
+          <button key={a.focus} className="list-item" onClick={() => onPick(a.focus)} data-testid={a.testId}>
+            <span className="list-icon tint"><Icon name={a.icon} size={19} /></span>
+            <span className="list-text">
+              <span className="list-title">{a.title}</span>
+              <span className="list-sub">{a.sub}</span>
+            </span>
+            <Icon name="right" size={18} className="chev" />
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
+/** Hides the floating button while the user scrolls down through content, shows it again on scroll up. */
+function useHideOnScroll() {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const on = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < 8) return;
+      setHidden(y > last && y > 120);
+      last = y;
+    };
+    window.addEventListener('scroll', on, { passive: true });
+    return () => window.removeEventListener('scroll', on);
+  }, []);
+  return hidden;
 }
 
 /** Page header: title + optional actions; on phones it respects the notch / Dynamic Island. */

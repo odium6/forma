@@ -102,23 +102,14 @@ export default function ReportsPage() {
       )}
       {period === 'goal' && !data.goals.length && <p className="small muted">Цель не задана — показаны последние 30 дней.</p>}
 
-      <section className="card export-bar">
-        <div className="grow">
-          <h3>Скачать отчёт · {PERIOD_LABELS[period].toLowerCase()}</h3>
-        </div>
-        <div className="row wrap">
-          <button className="btn primary" onClick={exportPDF} disabled={!!busy} data-testid="export-pdf"><Icon name="download" size={18} /> {busy === 'pdf' ? 'Готовим…' : 'PDF'}</button>
-          <button className="btn" onClick={exportCSV} data-testid="export-csv"><Icon name="download" size={18} /> CSV</button>
-          <button className="btn" onClick={exportJSON} data-testid="export-json"><Icon name="download" size={18} /> JSON</button>
-        </div>
-      </section>
 
       {w.points.length === 0 && report.habits.length === 0 ? (
         <section className="card"><EmptyState icon="report" title="Нет данных за период" text="Выбери другой период или внеси измерения." /></section>
       ) : (
-        <div className="dash">
+        <div className="report">
           <div className="col">
             <section className="card">
+              <div className="card-head"><h2>Главное</h2></div>
               <div className="report-tiles">
                 <Tile label="Начальный вес" value={w.start != null ? `${fmtNum(w.start, 2)} кг` : '—'} />
                 <Tile label="Конечный вес" value={w.end != null ? `${fmtNum(w.end, 2)} кг` : '—'} />
@@ -130,7 +121,7 @@ export default function ReportsPage() {
             </section>
             {w.points.length > 0 && (
               <section className="card">
-                <div className="card-head"><h2>Вес</h2></div>
+                <div className="card-head"><h2>Динамика веса</h2></div>
                 <LineChart
                   ariaLabel="Вес за период отчёта"
                   from={dayNumber(report.from)}
@@ -148,7 +139,7 @@ export default function ReportsPage() {
             )}
             {(report.measurements.length > 0 || report.bodyFat.count > 0) && (
               <section className="card">
-                <div className="card-head"><h2>Измерения</h2></div>
+                <div className="card-head"><h2>Параметры тела</h2></div>
                 <div className="table-wrap">
                   <table className="table">
                     <thead><tr><th>Параметр</th><th>Начало</th><th>Конец</th><th>Изменение</th></tr></thead>
@@ -171,8 +162,8 @@ export default function ReportsPage() {
             {report.habits.length > 0 && (
               <section className="card">
                 <div className="card-head">
-                  <h2>Привычки</h2>
-                  {report.habitRate != null && <span className="badge positive num">{fmtPct(report.habitRate)}</span>}
+                  <h2>Активность и привычки</h2>
+                  {report.habitRate != null && <span className="badge num">{fmtPct(report.habitRate)} выполнено</span>}
                 </div>
                 <div className="list">
                   {report.habits.map((h) => (
@@ -205,7 +196,8 @@ export default function ReportsPage() {
               )}
             </section>
             <section className="card">
-              <ToggleRow icon="image" title="Фото в отчёте" hint="Первое и последнее фото каждого ракурса за период" checked={data.settings.includePhotosInReports} onChange={(v) => void saveSettings({ includePhotosInReports: v })} />
+              <div className="card-head"><h2>Фотографии</h2></div>
+              <ToggleRow icon="image" title="Включать в отчёт" hint="Первое и последнее фото каждого ракурса за период" checked={data.settings.includePhotosInReports} onChange={(v) => void saveSettings({ includePhotosInReports: v })} />
               {data.settings.includePhotosInReports && (hasPin && locked ? (
                 <p className="small muted">Раздел фото заблокирован — разблокируй его, чтобы добавить фото в отчёт.</p>
               ) : reportPhotos.length ? (
@@ -224,6 +216,26 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+      <section className="card export" aria-labelledby="export-h">
+        <div className="card-head"><h2 id="export-h">Скачать · {PERIOD_LABELS[period].toLowerCase()}</h2></div>
+        <div className="export-list">
+          <button className="export-item" onClick={exportPDF} disabled={!!busy} aria-busy={busy === 'pdf'} data-testid="export-pdf">
+            <span className="list-icon tint"><Icon name="report" size={18} /></span>
+            <span className="list-text"><span className="list-title">{busy === 'pdf' ? 'Готовим PDF…' : 'PDF-отчёт'}</span><span className="list-sub">Графики и сводка — для себя или врача</span></span>
+            <Icon name="download" size={18} className="chev" />
+          </button>
+          <button className="export-item" onClick={exportCSV} data-testid="export-csv">
+            <span className="list-icon"><Icon name="layers" size={18} /></span>
+            <span className="list-text"><span className="list-title">CSV</span><span className="list-sub">Таблица измерений для Excel и Numbers</span></span>
+            <Icon name="download" size={18} className="chev" />
+          </button>
+          <button className="export-item" onClick={exportJSON} data-testid="export-json">
+            <span className="list-icon"><Icon name="database" size={18} /></span>
+            <span className="list-text"><span className="list-title">JSON</span><span className="list-sub">Все данные отчёта в машиночитаемом виде</span></span>
+            <Icon name="download" size={18} className="chev" />
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

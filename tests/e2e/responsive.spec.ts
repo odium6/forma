@@ -8,7 +8,7 @@ const VIEWPORTS = [
   { name: 'laptop', width: 1366, height: 768 },
   { name: 'monitor', width: 2560, height: 1440 },
 ];
-const ROUTES = ['/', '/progress', '/habits', '/calendar', '/photos', '/achievements', '/reports', '/settings', '/more'];
+const ROUTES = ['/', '/progress', '/habits', '/calendar', '/photos', '/achievements', '/reports', '/settings', '/settings/notifications', '/settings/data', '/more'];
 
 test.describe('адаптивность', () => {
   test.skip(({ isMobile }) => isMobile, 'viewport is set explicitly below');

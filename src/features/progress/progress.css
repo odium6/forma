@@ -1,1 +1,30 @@
 /* Progress-specific styles: shared stat/table styles live in global.css */
+
+/* trends grouped by horizon */
+.trend-groups { display: grid; gap: var(--s-4); }
+.trend-group .group-title { padding: 0 0 2px; }
+.trend-row { min-height: 46px; padding: 8px 0; }
+.trend-row .list-text > span:first-child { font-size: var(--t-secondary); }
+@media (min-width: 720px) { .trend-groups { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); } }
+
+/* body overview */
+.body-head, .body-row { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; }
+.body-head { font-size: var(--t-caption); color: var(--text-tertiary); font-weight: 600; padding: 0 8px 6px; }
+.body-head span:not(:first-child), .body-row > span:not(:first-child) { text-align: right; }
+.body-row { min-height: 46px; padding: 8px; border-radius: var(--r-sm); border-bottom: 0; }
+.body-row.on { background: var(--surface-2); }
+.body-name { font-weight: 560; line-height: 1.25; overflow-wrap: anywhere; }
+.body-row { font-size: var(--t-secondary); }
+.body-delta { font-size: var(--t-secondary); color: var(--text-secondary); }
+
+/* compare table */
+.cmp-table .num-col { text-align: right; white-space: nowrap; }
+.cmp-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
+.dir { color: var(--text-tertiary); }
+
+/* history */
+.history .group { padding: 0 4px 0 14px; }
+.hist-row { padding: 0; min-height: 60px; gap: 4px; }
+.hist-main { display: flex; align-items: center; gap: 14px; flex: 1 1 auto; min-width: 0; background: none; border: 0; padding: 10px 0; text-align: left; color: inherit; }
+.hist-date { display: flex; flex-direction: column; width: 92px; flex: none; font-size: var(--t-secondary); }
+.hist-extra { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

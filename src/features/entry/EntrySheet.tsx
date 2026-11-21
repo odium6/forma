@@ -14,7 +14,7 @@ import './entry.css';
 interface OpenOpts {
   date?: ISODate;
   entryId?: string;
-  focus?: 'weight' | 'measurements';
+  focus?: 'weight' | 'measurements' | 'note';
 }
 
 const Ctx = createContext<(o?: OpenOpts) => void>(() => {});
@@ -70,13 +70,15 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
   const hasValue = parseDecimal(weight) != null || parseDecimal(bodyFat) != null || Object.keys(parsedMeas).length > 0;
   const needsDupChoice = !editing && sameDay.length > 0 && dupAction == null;
   const futureDate = date > today();
+  const noteMode = opts.focus === 'note' && !editing;
+  const hasContent = hasValue || note.trim().length > 0;
 
   const navy = data.profile ? navyBodyFat(data.profile.sex, data.profile.heightCm, parsedMeas.waist, parsedMeas.neck, parsedMeas.hips) : null;
   const w = parseDecimal(weight);
   const bigJump = w != null && lastWeight != null && !editing && Math.abs(w - lastWeight) > 3;
 
   const save = async () => {
-    if (!allValid || !hasValue || needsDupChoice) return;
+    if (!allValid || !hasContent || needsDupChoice) return;
     setSaving(true);
     try {
       const payload = { date, time, weight: parseDecimal(weight), bodyFat: parseDecimal(bodyFat), measurements: parsedMeas, note: note.trim().slice(0, 1000) };
@@ -126,7 +128,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
     <Sheet
       open
       onClose={onClose}
-      title={editing ? 'Редактировать запись' : 'Внести данные'}
+      title={editing ? 'Редактировать запись' : noteMode ? 'Заметка' : opts.focus === 'measurements' ? 'Параметры тела' : 'Вес'}
       footer={
         <>
           {editing && (
@@ -135,7 +137,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
             </button>
           )}
           <button className="btn" onClick={onClose}>Отмена</button>
-          <button className="btn primary" disabled={!allValid || !hasValue || needsDupChoice || saving} onClick={save} data-testid="entry-save">
+          <button className="btn primary" disabled={!allValid || !hasContent || needsDupChoice || saving} onClick={save} data-testid="entry-save">
             Сохранить
           </button>
         </>
@@ -148,6 +150,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
           void save();
         }}
       >
+        {!noteMode && (
         <NumberField
           label="Вес"
           big
@@ -161,6 +164,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
           testId="entry-weight"
           hint={lastWeight != null ? `Последний раз: ${fmtKg(lastWeight)}` : 'Можно внести только вес — остальное необязательно'}
         />
+        )}
         {bigJump && (
           <Notice tone="warn">Разница с прошлым измерением больше 3 кг. Проверь значение — если всё верно, это может быть колебание воды.</Notice>
         )}
@@ -176,7 +180,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
         </div>
         {futureDate && <Notice tone="warn">Это будущая дата — проверь, всё ли верно.</Notice>}
 
-        {needsDupChoice || (!editing && sameDay.length > 0) ? (
+        {!noteMode && (needsDupChoice || (!editing && sameDay.length > 0)) ? (
           <div className="dup">
             <Notice tone="info">
               За {formatDate(date)} уже есть {sameDay.length === 1 ? 'запись' : `${sameDay.length} записи`} ({sameDay.map((e) => `${e.time}${e.weight != null ? ` · ${fmtKg(e.weight)}` : ''}`).join(', ')}). Что сделать?
@@ -194,12 +198,14 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
           </div>
         ) : null}
 
+        {!noteMode && (
         <button type="button" className="disclosure" aria-expanded={showMore} onClick={() => setShowMore((v) => !v)}>
           <Icon name="ruler" size={19} />
           <span className="grow">Процент жира и измерения тела</span>
           <Icon name="down" size={18} style={{ transform: showMore ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }} />
         </button>
-        {showMore && (
+        )}
+        {showMore && !noteMode && (
           <div className="stack fade-up">
             <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} typical={TYPICAL.bodyFat} max={LIMITS.bodyFat.max} hint="Со смарт-весов, калипера или по формуле ниже" />
             {navy != null && parseDecimal(bodyFat) == null && (
@@ -231,7 +237,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
         )}
         <div className="field">
           <label htmlFor="entry-note">Заметка</label>
-          <textarea id="entry-note" className="input" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Самочувствие, сон, тренировка, особенности питания…" />
+          <textarea id="entry-note" className="input" autoFocus={noteMode} rows={noteMode ? 5 : 3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Самочувствие, сон, тренировка, особенности питания…" />
         </div>
         <button type="submit" hidden />
       </form>

@@ -3,9 +3,9 @@ import { PageHeader } from '@/app/Layout';
 import { LockScreen, useLock } from '@/app/lock';
 import type { PhotoCategory, PhotoMeta } from '@/domain/types';
 import { addPhoto, deletePhoto, updatePhotoMeta, useData } from '@/state/store';
-import { formatDate, today } from '@/lib/dates';
+import { addDays, formatDate, today } from '@/lib/dates';
 import { captureFrame, preparePhoto, type PreparedPhoto } from '@/lib/images';
-import { EmptyState, Segmented, Notice, ToggleRow } from '@/ui/controls';
+import { Segmented, Notice, ToggleRow } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
 import { useFeedback } from '@/ui/feedback';
 import { Icon } from '@/ui/Icon';
@@ -14,7 +14,13 @@ import { CompareView } from './CompareView';
 import './photos.css';
 
 export const CATEGORY_LABELS: Record<PhotoCategory, string> = { front: 'Спереди', side: 'Сбоку', back: 'Сзади', other: 'Другое' };
-type Filter = PhotoCategory | 'all';
+type Period = 'all' | '30' | '90' | '365';
+const PERIODS: { value: Period; label: string }[] = [
+  { value: 'all', label: 'Всё время' },
+  { value: '30', label: '30 дней' },
+  { value: '90', label: '3 месяца' },
+  { value: '365', label: 'Год' },
+];
 
 export default function PhotosPage() {
   const data = useData();
@@ -24,7 +30,8 @@ export default function PhotosPage() {
   useEffect(() => () => {
     if (immediate) lock();
   }, [immediate, lock]);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [groupBy, setGroupBy] = useState<'date' | 'angle'>('date');
+  const [period, setPeriod] = useState<Period>('all');
   const [order, setOrder] = useState<'new' | 'old'>('new');
   const [pending, setPending] = useState<PreparedPhoto[] | null>(null);
   const [camera, setCamera] = useState(false);
@@ -43,10 +50,16 @@ export default function PhotosPage() {
     );
   }
 
-  const list = data.photos.filter((p) => filter === 'all' || p.category === filter);
+  const since = period === 'all' ? '' : addDays(today(), -Number(period));
+  const list = data.photos.filter((p) => p.date >= since);
   const sorted = order === 'new' ? list : [...list].reverse();
   const groups = new Map<string, PhotoMeta[]>();
-  for (const p of sorted) groups.set(p.date, [...(groups.get(p.date) ?? []), p]);
+  if (groupBy === 'angle') for (const c of Object.keys(CATEGORY_LABELS) as PhotoCategory[]) groups.set(c, []);
+  for (const p of sorted) {
+    const k = groupBy === 'date' ? p.date : p.category;
+    groups.set(k, [...(groups.get(k) ?? []), p]);
+  }
+  const groupTitle = (k: string) => (groupBy === 'date' ? formatDate(k, { weekday: true }) : CATEGORY_LABELS[k as PhotoCategory]);
   const viewing = data.photos.find((p) => p.id === viewer) ?? null;
 
   const onFiles = async (files: FileList | null) => {
@@ -67,7 +80,6 @@ export default function PhotosPage() {
     <div className="page">
       <PageHeader
         title="Фото"
-        subtitle="Хранятся только на этом устройстве"
         actions={
           <>
             {data.photos.length >= 2 && (
@@ -75,47 +87,55 @@ export default function PhotosPage() {
                 <Icon name="compare" size={18} /> <span className="hide-xs">Сравнить</span>
               </button>
             )}
-            <button className="btn primary" onClick={() => setChoose(true)} data-testid="photo-add">
-              <Icon name="plus" size={18} /> Добавить
+            <button className="btn primary icon" aria-label="Добавить фото" onClick={() => setChoose(true)} data-testid="photo-add">
+              <Icon name="plus" size={22} />
             </button>
           </>
         }
       />
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => onFiles(e.target.files)} data-testid="photo-input" />
       {data.photos.length > 0 && (
-      <div className="row wrap between">
-        <Segmented
-          label="Ракурс"
-          value={filter}
-          onChange={setFilter}
-          items={[{ value: 'all', label: 'Все' }, ...(Object.keys(CATEGORY_LABELS) as PhotoCategory[]).map((c) => ({ value: c, label: CATEGORY_LABELS[c] }))]}
-        />
-        <div className="row">
-          <button className="btn sm ghost" onClick={() => setOrder(order === 'new' ? 'old' : 'new')} aria-label="Порядок сортировки">
-            <Icon name={order === 'new' ? 'arrowDown' : 'arrowUp'} size={16} /> {order === 'new' ? 'Сначала новые' : 'Сначала старые'}
-          </button>
+        <div className="photo-tools">
+          <Segmented
+            label="Группировка"
+            value={groupBy}
+            onChange={setGroupBy}
+            items={[{ value: 'date', label: 'По датам' }, { value: 'angle', label: 'По ракурсам' }]}
+          />
+          <div className="row">
+            <select className="input sm-select" aria-label="Период" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
+              {PERIODS.map((x) => (
+                <option key={x.value} value={x.value}>{x.label}</option>
+              ))}
+            </select>
+            <button className="btn icon sm ghost" onClick={() => setOrder(order === 'new' ? 'old' : 'new')} aria-label={order === 'new' ? 'Сначала новые. Сменить порядок' : 'Сначала старые. Сменить порядок'}>
+              <Icon name={order === 'new' ? 'arrowDown' : 'arrowUp'} size={18} />
+            </button>
+          </div>
         </div>
-      </div>
       )}
       {data.photos.length === 0 ? (
-        <section className="card">
-          <EmptyState
-            icon="camera"
-            title="Фото прогресса"
-            text="Нажми «Добавить». Снимай в одном месте, при одинаковом свете и в одной позе — так изменения заметнее."
-          />
-        </section>
+        <div className="photo-empty">
+          <span className="empty-art"><Icon name="camera" size={26} /></span>
+          <h3>Фото прогресса</h3>
+          <p className="small muted">Снимай в одном месте, при одинаковом свете и в одной позе — так изменения заметнее. Фото хранятся только на этом устройстве.</p>
+          <button className="btn primary" onClick={() => setChoose(true)}>
+            <Icon name="plus" size={18} /> Добавить фото
+          </button>
+        </div>
       ) : sorted.length === 0 ? (
-        <p className="muted small">Нет фото в этой категории.</p>
+        <p className="muted small">Нет фото за выбранный период.</p>
       ) : (
-        [...groups.entries()].map(([date, ps]) => (
-          <section key={date} className="photo-group">
-            <h3 className="small muted">{formatDate(date, { weekday: true })}</h3>
+        [...groups.entries()].filter(([, ps]) => ps.length > 0).map(([k, ps]) => (
+          <section key={k} className="photo-group">
+            <h2 className="group-title">
+              {groupTitle(k)} <span className="faint num">· {ps.length}</span>
+            </h2>
             <div className="photo-grid">
               {ps.map((p) => (
                 <div key={p.id} className="photo-cell">
                   <PhotoThumb photo={p} onClick={() => setViewer(p.id)} label={`${CATEGORY_LABELS[p.category]}, ${formatDate(p.date)}`} />
-                  <span className="photo-tag">{CATEGORY_LABELS[p.category]}</span>
+                  <span className="photo-tag">{groupBy === 'date' ? CATEGORY_LABELS[p.category] : formatDate(p.date)}</span>
                 </div>
               ))}
             </div>
@@ -125,15 +145,18 @@ export default function PhotosPage() {
       <Sheet open={choose} onClose={() => setChoose(false)} title="Добавить фото" size="sm">
         <div className="list">
           <button className="list-item" onClick={() => { setChoose(false); setCamera(true); }}>
-            <span className="list-icon"><Icon name="camera" size={20} /></span>
-            <span className="grow">
-              <span className="strong">Сделать снимок</span>
-              <span className="small muted" style={{ display: 'block' }}>С подсказкой, чтобы встать в ту же позу</span>
+            <span className="list-icon tint"><Icon name="camera" size={19} /></span>
+            <span className="list-text">
+              <span className="list-title">Сделать снимок</span>
+              <span className="list-sub">С подсказкой, чтобы встать в ту же позу</span>
             </span>
           </button>
           <button className="list-item" onClick={() => { setChoose(false); fileRef.current?.click(); }}>
-            <span className="list-icon"><Icon name="image" size={20} /></span>
-            <span className="grow strong">Выбрать из галереи</span>
+            <span className="list-icon tint"><Icon name="image" size={19} /></span>
+            <span className="list-text">
+              <span className="list-title">Выбрать из галереи</span>
+              <span className="list-sub">До 12 фото за раз</span>
+            </span>
           </button>
         </div>
       </Sheet>
