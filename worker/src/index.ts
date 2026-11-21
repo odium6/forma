@@ -37,6 +37,7 @@ const putBody = z.object({
   quietHours: z.object({ enabled: z.boolean(), start: hhmm, end: hhmm }),
   motivation: z.boolean(),
   snoozeMinutes: z.number().int().min(5).max(240),
+  skipIfDone: z.boolean().optional().default(false),
 });
 const endpointBody = z.object({ id, subscription });
 const idBody = z.object({ id });
@@ -97,7 +98,7 @@ async function handle(req: Request, env: Env): Promise<Response> {
   if (pathname === '/v1/subscription' && req.method === 'PUT') {
     const b = await readJson(req, putBody);
     if (!b) return json({ error: 'invalid' }, 400, h);
-    const cfg: SubConfig = { reminders: b.reminders, quietHours: b.quietHours, motivation: b.motivation, snoozeMinutes: b.snoozeMinutes };
+    const cfg: SubConfig = { reminders: b.reminders, quietHours: b.quietHours, motivation: b.motivation, snoozeMinutes: b.snoozeMinutes, skipIfDone: b.skipIfDone };
     await env.DB.prepare(
       `INSERT INTO subs (id, endpoint, p256dh, auth, tz, config, state, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
        ON CONFLICT(id) DO UPDATE SET endpoint = ?2, p256dh = ?3, auth = ?4, tz = ?5, config = ?6, updated_at = ?8`,
@@ -184,13 +185,21 @@ async function runSchedule(env: Env, now: Date) {
     }
     const { deliveries, state: nextState, changed } = dueDeliveries(cfg, state, now, row.tz);
     let gone = false;
+    // a failed send is not marked as delivered, so the next cron tick (within the lookback window) retries it
+    const retry = (rid: string) => {
+      if (rid in state.fired) nextState.fired[rid] = state.fired[rid];
+      else delete nextState.fired[rid];
+      if (rid in state.snooze) nextState.snooze[rid] = state.snooze[rid];
+    };
     for (const d of deliveries) {
       try {
         const status = await sendPush(env, row, { title: d.title, body: d.body, url: d.url, tag: d.tag, reminderId: d.reminder.id, kind: d.reminder.kind, sub: row.id });
+        console.log('push', d.reminder.kind, status);
         if (status === 404 || status === 410) gone = true;
-        else if (status >= 300) console.warn('push failed', status);
+        else if (status >= 300) retry(d.reminder.id);
       } catch (e) {
         console.warn('push error', (e as Error).message);
+        retry(d.reminder.id);
       }
     }
     if (gone) await env.DB.prepare('DELETE FROM subs WHERE id = ?').bind(row.id).run();

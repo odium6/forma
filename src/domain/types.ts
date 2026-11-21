@@ -170,6 +170,8 @@ export interface Settings {
   notificationsEnabled: boolean;
   quietHours: { enabled: boolean; start: HHmm; end: HHmm };
   snoozeMinutes: number;
+  /** Skip a reminder when its action (weighing, photo, habits) is already done today. */
+  skipIfDone: boolean;
   pin: { hash: string; salt: string; iterations: number } | null;
   biometricCredentialId: string | null;
   lockScope: 'photos' | 'app';
@@ -189,6 +191,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notificationsEnabled: false,
   quietHours: { enabled: true, start: '22:30', end: '07:00' },
   snoozeMinutes: 30,
+  skipIfDone: false,
   pin: null,
   biometricCredentialId: null,
   lockScope: 'photos',

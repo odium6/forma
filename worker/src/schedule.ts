@@ -15,6 +15,8 @@ export interface SubConfig {
   quietHours: Settings['quietHours'];
   motivation: boolean;
   snoozeMinutes: number;
+  /** Old clients did not send it; absent means the reminder always arrives. */
+  skipIfDone?: boolean;
 }
 
 export interface SubState {
@@ -75,7 +77,7 @@ export function dueDeliveries(cfg: SubConfig, state: SubState, nowUtc: Date, tim
   for (const r of cfg.reminders) {
     if (!r.enabled) continue;
     const skipped = next.skip[r.id] === today;
-    const done = next.done[r.kind] === today && r.kind !== 'custom';
+    const done = !!cfg.skipIfDone && next.done[r.kind] === today && r.kind !== 'custom';
     const make = (suffix: string): Delivery => ({
       reminder: r,
       title: r.label || 'FORMA',

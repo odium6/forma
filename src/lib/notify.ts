@@ -85,14 +85,14 @@ async function tick() {
     if (st.skipDate === today()) continue;
     if (st.snoozedUntil && st.snoozedUntil <= now.getTime()) {
       await db.put('reminderState', { ...st, snoozedUntil: null, lastFiredAt: now.getTime() });
-      if (!alreadyDone(r)) await showReminder(r, `s${st.snoozeCount}`);
+      if (!(s.settings.skipIfDone && alreadyDone(r))) await showReminder(r, `s${st.snoozeCount}`);
       continue;
     }
     const occ = lastOccurrence(r, now, s.settings.quietHours, LOOKBACK);
     if (!occ || (st.lastFiredAt && st.lastFiredAt >= occ.getTime())) continue;
     // mark first: guarantees a single delivery even if two tabs tick together
     await db.put('reminderState', { ...st, lastFiredAt: now.getTime(), snoozeCount: 0, snoozedUntil: null });
-    if (!alreadyDone(r)) await showReminder(r);
+    if (!(s.settings.skipIfDone && alreadyDone(r))) await showReminder(r);
   }
 }
 

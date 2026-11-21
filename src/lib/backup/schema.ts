@@ -137,6 +137,7 @@ export const settingsSchema = z
     notificationsEnabled: z.boolean(),
     quietHours: z.object({ enabled: z.boolean(), start: hhmm, end: hhmm }),
     snoozeMinutes: z.number().int().min(5).max(240),
+    skipIfDone: z.boolean(),
     lockScope: z.enum(['photos', 'app']),
     autoLockMinutes: z.number().int().min(0).max(60),
     lastBackupAt: ts.nullable(),

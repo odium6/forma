@@ -31,12 +31,17 @@ describe('push schedule (server)', () => {
     expect(dueDeliveries(cfg(), EMPTY_STATE, at('2026-01-05T05:30:00Z'), 'Europe/Moscow').deliveries).toHaveLength(0);
   });
 
-  it('does not send when already done or skipped today', () => {
+  it('sends even when already done today unless the user opted to skip', () => {
     const now = at('2026-01-05T05:00:30Z');
-    expect(dueDeliveries(cfg(), { ...EMPTY_STATE, done: { weigh: '2026-01-05' } }, now, 'Europe/Moscow').deliveries).toHaveLength(0);
+    expect(dueDeliveries(cfg(), { ...EMPTY_STATE, done: { weigh: '2026-01-05' } }, now, 'Europe/Moscow').deliveries).toHaveLength(1);
+    expect(dueDeliveries(cfg({ skipIfDone: true }), { ...EMPTY_STATE, done: { weigh: '2026-01-05' } }, now, 'Europe/Moscow').deliveries).toHaveLength(0);
+  });
+
+  it('does not send when skipped today; old done markers never block', () => {
+    const now = at('2026-01-05T05:00:30Z');
     expect(dueDeliveries(cfg(), { ...EMPTY_STATE, skip: { r1: '2026-01-05' } }, now, 'Europe/Moscow').deliveries).toHaveLength(0);
     // yesterday's markers don't block today
-    expect(dueDeliveries(cfg(), { ...EMPTY_STATE, done: { weigh: '2026-01-04' } }, now, 'Europe/Moscow').deliveries).toHaveLength(1);
+    expect(dueDeliveries(cfg({ skipIfDone: true }), { ...EMPTY_STATE, done: { weigh: '2026-01-04' } }, now, 'Europe/Moscow').deliveries).toHaveLength(1);
   });
 
   it('respects quiet hours and week parity', () => {

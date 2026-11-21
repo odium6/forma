@@ -57,6 +57,7 @@ function payload(id: string, sub: PushSubscription) {
     quietHours: s.settings.quietHours,
     motivation: s.settings.motivation,
     snoozeMinutes: s.settings.snoozeMinutes,
+    skipIfDone: s.settings.skipIfDone,
   };
 }
 

@@ -13,5 +13,5 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "forma-push", "database_id": "051745ca-a727-407a-8ce7-f68274202eb6" }
   ],
-  "observability": { "enabled": false }
+  "observability": { "enabled": true, "head_sampling_rate": 1 }
 }

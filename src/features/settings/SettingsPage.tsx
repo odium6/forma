@@ -231,6 +231,7 @@ function NotificationsSection() {
         </>
       )}
       <ToggleRow icon="sparkle" title="Мотивационные сообщения" hint="Отдельно от напоминаний: вдохновляющие фразы в уведомлениях и на главной" checked={settings.motivation} onChange={(v) => void saveSettings({ motivation: v })} />
+      <ToggleRow icon="check" title="Не напоминать, если уже сделано" hint={settings.skipIfDone ? 'Напоминание не придёт, если сегодня уже есть взвешивание, фото или все привычки отмечены' : 'Напоминания приходят всегда'} checked={settings.skipIfDone} onChange={(v) => void saveSettings({ skipIfDone: v })} />
       <ToggleRow icon="moon" title="Тихие часы" hint={settings.quietHours.enabled ? `${settings.quietHours.start}–${settings.quietHours.end}: напоминания переносятся на конец периода` : 'Выключены'} checked={settings.quietHours.enabled} onChange={(v) => void saveSettings({ quietHours: { ...settings.quietHours, enabled: v } })} />
       {settings.quietHours.enabled && (
         <div className="grid-2" style={{ margin: '4px 0 12px' }}>
