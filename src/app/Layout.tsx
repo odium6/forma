@@ -59,7 +59,6 @@ export function Layout({ children }: { children: ReactNode }) {
   const openEntry = useOpenEntry();
   const desktop = useIsDesktop();
   const [addOpen, setAddOpen] = useState(false);
-  const fabHidden = useHideOnScroll();
 
   const mobileItems = NAV.filter((n) => n.mobile);
   const inMobile = mobileItems.some((n) => n.to === loc.pathname);
@@ -98,13 +97,6 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
       {!desktop && (
         <>
-          {loc.pathname === '/' && (
-            <div className={`fab-wrap${fabHidden ? ' hidden' : ''}`}>
-              <button className="fab" aria-label="Внести данные" data-testid="add-entry" onClick={() => setAddOpen(true)}>
-                <Icon name="plus" size={26} strokeWidth={2.4} />
-              </button>
-            </div>
-          )}
           <nav className="tabbar-wrap" aria-label="Основная навигация">
             <TabBar
               className="tabbar"
@@ -153,23 +145,6 @@ function AddSheet({ open, onClose, onPick }: { open: boolean; onClose: () => voi
       </div>
     </Sheet>
   );
-}
-
-/** Hides the floating button while the user scrolls down through content, shows it again on scroll up. */
-function useHideOnScroll() {
-  const [hidden, setHidden] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    const on = () => {
-      const y = window.scrollY;
-      if (Math.abs(y - last) < 8) return;
-      setHidden(y > last && y > 120);
-      last = y;
-    };
-    window.addEventListener('scroll', on, { passive: true });
-    return () => window.removeEventListener('scroll', on);
-  }, []);
-  return hidden;
 }
 
 /** Page header: title + optional actions; on phones it respects the notch / Dynamic Island. */

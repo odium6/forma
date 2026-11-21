@@ -82,3 +82,7 @@
   .hero { padding: var(--s-6); }
   .home-greet { font-size: 30px; }
 }
+
+.add-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.add-row .btn.lg { min-height: 54px; font-size: 17px; }
+.add-row .lg-button, .add-row > button:last-child { flex: none; }

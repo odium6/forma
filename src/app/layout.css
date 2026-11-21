@@ -7,7 +7,7 @@
   min-width: 0;
 }
 /* the home screen leaves room for the floating add button above the tab bar */
-.main:has(.home) { padding-bottom: calc(var(--safe-bottom) + var(--tabbar-h) + 96px); }
+
 
 .page { display: flex; flex-direction: column; gap: var(--s-5); animation: fade-up var(--dur-slow) var(--ease-out) both; }
 .page-head { display: flex; align-items: center; gap: var(--s-3); padding: 4px 2px 0; min-height: 48px; }

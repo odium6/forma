@@ -41,13 +41,13 @@ export function rangeStart(r: RangeKey, firstDay: number | null, asOf = today())
 }
 
 /** Weight chart: raw readings, 7-day average, smoothed trend, target and forecast with its uncertainty band. */
-export function WeightChart({ data, summary, height = 260, defaultRange = 'M', showForecast = true }: { data: AppData; summary: Summary; height?: number; defaultRange?: RangeKey; showForecast?: boolean }) {
+export function WeightChart({ data, summary, height = 260, defaultRange = 'M', showForecast = true, compact = false }: { data: AppData; summary: Summary; height?: number; defaultRange?: RangeKey; showForecast?: boolean; compact?: boolean }) {
   const [range, setRange] = useState<RangeKey>(defaultRange);
   const { points, trend, target, forecast, maintenance } = summary;
   const end = dayNumber(today());
   const from = rangeStart(range, points[0]?.day ?? null);
 
-  const path = useMemo(() => (showForecast && target != null ? forecastPath(forecast, target, 180) : []), [forecast, target, showForecast]);
+  const path = useMemo(() => (showForecast && !compact && target != null ? forecastPath(forecast, target, 180) : []), [forecast, target, showForecast]);
   const forecastEnd = path.length ? path[path.length - 1].day : end;
   // show part of the projection after today: up to a third of the visible range
   const to = Math.round(Math.max(end, Math.min(forecastEnd, end + (end - from) * 0.35)));
@@ -66,6 +66,8 @@ export function WeightChart({ data, summary, height = 260, defaultRange = 'M', s
     },
     { id: 'trend', label: 'Тренд', points: points.map((p, i) => ({ day: p.day, value: trend[i] })), style: 'line', color: 'var(--chart-trend)', breakGapDays: 21 },
   ];
+  // the compact chart shows only readings and the trend line
+  if (compact) series.splice(1, 1);
   if (path.length) {
     series.push({ id: 'fc', label: 'Прогноз', points: path.map((p) => ({ day: p.day, value: p.value })), style: 'dashed', color: 'var(--chart-forecast)', band: path, tooltip: false });
   }
@@ -75,7 +77,7 @@ export function WeightChart({ data, summary, height = 260, defaultRange = 'M', s
 
   return (
     <div className="stack" style={{ ['--gap' as string]: '12px' }}>
-      <Segmented label="Период графика" items={RANGE_ITEMS} value={range} onChange={setRange} className="range-seg" />
+      {!compact && <Segmented label="Период графика" items={RANGE_ITEMS} value={range} onChange={setRange} className="range-seg" />}
       {range === 'D' ? (
         <div className="day-view">
           {summary.latest ? (
@@ -113,14 +115,14 @@ export function WeightChart({ data, summary, height = 260, defaultRange = 'M', s
             range={m && maintenance ? { lo: maintenance.low, hi: maintenance.high, label: 'Диапазон' } : null}
             emptyText="Нет измерений за этот период"
           />
-          <ChartLegend
+          {!compact && <ChartLegend
             items={[
               { label: 'Измерения', color: 'var(--chart-dot)', style: 'dots' },
               { label: 'Среднее 7 дн.', color: 'var(--chart-average)', style: 'line' },
               { label: 'Тренд', color: 'var(--chart-trend)', style: 'line' },
               ...(forecastVisible ? [{ label: 'Прогноз и диапазон', color: 'var(--chart-forecast)', style: 'dashed' as const }] : []),
             ]}
-          />
+          />}
         </>
       )}
     </div>

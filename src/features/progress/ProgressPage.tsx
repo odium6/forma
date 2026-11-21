@@ -4,7 +4,7 @@ import { addCustomMetric, deleteCustomMetric, deleteEntry, addEntry, useData } f
 import { computeSummary } from '@/lib/summary';
 import { dailySeries, exponentialTrend, linearTrend, mean, pointsBetween, type SeriesKey } from '@/lib/math/series';
 import { dayNumber, formatDate, fromDayNumber, today } from '@/lib/dates';
-import { fmtKg, fmtNum, fmtSigned, nDays } from '@/lib/format';
+import { fmtKg, fmtNum, fmtSigned } from '@/lib/format';
 import { allMetricKeys, metricLabel } from '@/lib/metrics';
 import { WeightChart, RANGE_ITEMS, rangeStart, type RangeKey } from '@/features/charts/WeightChart';
 import { useOpenEntry } from '@/features/entry/EntrySheet';
@@ -53,7 +53,6 @@ function WeightTab({ data }: { data: AppData }) {
   const t90 = linearTrend(s.points, asOf, 90, { minPoints: 10, minSpanDays: 45 });
   const values = s.points.map((p) => p.value);
   const last7 = pointsBetween(s.points, fromDayNumber(dayNumber(asOf) - 6), asOf).map((p) => p.value);
-  const f = s.forecast;
 
   if (!s.points.length) return <EmptyState icon="scale" title="Пока нет измерений" text="Внеси вес, чтобы увидеть графики и тренды." />;
 
@@ -84,19 +83,6 @@ function WeightTab({ data }: { data: AppData }) {
       </div>
       <div className="col">
         <GoalCard data={data} summary={s} />
-        <section className="card">
-          <div className="card-head"><h2>О прогнозе</h2></div>
-          <div className="stack small" style={{ ['--gap' as string]: '10px' }}>
-            {f.fit ? (
-              <p>
-                Прогноз строится по последним 4 неделям. Сейчас темп <span className="num strong">{fmtSigned(f.kgPerWeek!, 2)} кг/нед</span>.
-              </p>
-            ) : (
-              <p>Прогноз появится после 6 взвешиваний в течение 10 дней.{f.needPoints > 0 && ` Осталось взвешиваний: ${f.needPoints}.`}{f.needSpanDays > 0 && ` Ещё ${nDays(f.needSpanDays)}.`}</p>
-            )}
-            <p className="muted">Вес естественно колеблется на 0,5–2 кг за день — из‑за воды, соли и времени взвешивания. Поэтому FORMA ориентируется на сглаженный тренд, а не на одно значение.</p>
-          </div>
-        </section>
       </div>
     </div>
   );

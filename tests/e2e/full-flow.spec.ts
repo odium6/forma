@@ -69,12 +69,16 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   await onboard(page);
 
   // ── entry: weight + measurements, duplicate-day handling ──
-  await page.getByTestId('add-entry').click();
-  await page.getByTestId('add-weight').click();
-  await page.getByTestId('entry-weight').fill('79,6');
-  await expect(page.getByText(/уже есть запись/)).toBeVisible(); // warned about the existing day entry
-  await page.getByRole('button', { name: 'Добавить ещё одно измерение' }).click();
-  await page.getByRole('button', { name: 'Процент жира и измерения тела' }).click();
+  await page.getByTestId('home-add-weight').click();
+  // wheel picker starts at the last weight (80,00): one kilogram down, then 60 hundredths up
+  const kg = page.getByTestId('wheel-kg');
+  await expect(kg).toHaveAttribute('aria-valuetext', '80');
+  await kg.press('ArrowUp');
+  await expect(kg).toHaveAttribute('aria-valuetext', '79');
+  const frac = page.getByTestId('wheel-frac');
+  for (let i = 0; i < 6; i++) await frac.press('PageDown');
+  await expect(frac).toHaveAttribute('aria-valuetext', '60');
+  await page.getByRole('button', { name: 'Параметры тела' }).click();
   await page.getByLabel('Бёдра').fill('101');
   await page.getByTestId('entry-save').click();
   await expect(page.getByText('Сохранено: 79,60 кг')).toBeVisible();

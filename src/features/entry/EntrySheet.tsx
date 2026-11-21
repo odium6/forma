@@ -1,12 +1,13 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import type { ISODate, MeasurementKey } from '@/domain/types';
 import { addEntry, deleteEntry, updateEntry, useData } from '@/state/store';
 import { formatDate, nowTime, today } from '@/lib/dates';
 import { fmtKg, fmtNum, parseDecimal } from '@/lib/format';
 import { LIMITS, TYPICAL, navyBodyFat } from '@/lib/math/body';
-import { allMetricKeys, MEASUREMENT_HINTS, metricLabel } from '@/lib/metrics';
+import { allMetricKeys, metricLabel } from '@/lib/metrics';
 import { Sheet } from '@/ui/Sheet';
-import { NumberField, fieldValid, Notice, ChipGroup } from '@/ui/controls';
+import { NumberField, fieldValid, Notice } from '@/ui/controls';
+import { WeightWheel } from '@/ui/Wheel';
 import { useFeedback } from '@/ui/feedback';
 import { Icon } from '@/ui/Icon';
 import './entry.css';
@@ -29,7 +30,7 @@ export function EntryProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={open}>
       {children}
-      {opts && <EntryForm key={`${opts.entryId ?? 'new'}-${opts.date ?? ''}`} opts={opts} onClose={() => setOpts(null)} />}
+      {opts && <EntryForm key={`${opts.entryId ?? 'new'}-${opts.date ?? ''}-${opts.focus ?? ''}`} opts={opts} onClose={() => setOpts(null)} />}
     </Ctx.Provider>
   );
 }
@@ -41,20 +42,20 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
   const { toast, confirm } = useFeedback();
   const editing = opts.entryId ? data.entries.find((e) => e.id === opts.entryId) ?? null : null;
   const lastWeight = [...data.entries].reverse().find((e) => e.weight != null)?.weight ?? null;
+  const mode: 'weight' | 'measurements' | 'note' = editing ? (editing.weight != null ? 'weight' : 'measurements') : (opts.focus ?? 'weight');
 
   const [date, setDate] = useState<ISODate>(editing?.date ?? opts.date ?? today());
   const [time, setTime] = useState(editing?.time ?? nowTime());
-  const [weight, setWeight] = useState(str(editing?.weight));
+  const [weight, setWeight] = useState<number | null>(mode === 'weight' ? (editing?.weight ?? lastWeight ?? 70) : null);
   const [bodyFat, setBodyFat] = useState(str(editing?.bodyFat));
   const [note, setNote] = useState(editing?.note ?? '');
   const [meas, setMeas] = useState<Partial<Record<MeasurementKey, string>>>(() =>
     Object.fromEntries(Object.entries(editing?.measurements ?? {}).map(([k, v]) => [k, str(v)])),
   );
-  const [showMore, setShowMore] = useState(opts.focus === 'measurements' || !!editing && (editing.bodyFat != null || Object.keys(editing.measurements).length > 0));
-  const [dupAction, setDupAction] = useState<'replace' | 'add' | null>('add');
+  const [showWhen, setShowWhen] = useState(false);
+  const [showNote, setShowNote] = useState(mode === 'note' || !!editing?.note);
+  const [showBody, setShowBody] = useState(mode === 'measurements' || (!!editing && (editing.bodyFat != null || Object.keys(editing.measurements).length > 0)));
   const [saving, setSaving] = useState(false);
-
-  const sameDay = useMemo(() => data.entries.filter((e) => e.date === date && e.id !== editing?.id), [data.entries, date, editing]);
   const keys = allMetricKeys(data.customMetrics);
 
   const parsedMeas = Object.fromEntries(
@@ -64,39 +65,22 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
   ) as Partial<Record<MeasurementKey, number>>;
 
   const allValid =
-    fieldValid(weight, LIMITS.weight.min, LIMITS.weight.max) &&
     fieldValid(bodyFat, LIMITS.bodyFat.min, LIMITS.bodyFat.max) &&
     Object.values(meas).every((v) => fieldValid(v ?? '', LIMITS.measurement.min, LIMITS.measurement.max));
-  const hasValue = parseDecimal(weight) != null || parseDecimal(bodyFat) != null || Object.keys(parsedMeas).length > 0;
-  const needsDupChoice = !editing && sameDay.length > 0 && dupAction == null;
+  const hasContent = weight != null || parseDecimal(bodyFat) != null || Object.keys(parsedMeas).length > 0 || note.trim().length > 0;
+  const isToday = date === today();
   const futureDate = date > today();
-  const noteMode = opts.focus === 'note' && !editing;
-  const hasContent = hasValue || note.trim().length > 0;
-
   const navy = data.profile ? navyBodyFat(data.profile.sex, data.profile.heightCm, parsedMeas.waist, parsedMeas.neck, parsedMeas.hips) : null;
-  const w = parseDecimal(weight);
-  const bigJump = w != null && lastWeight != null && !editing && Math.abs(w - lastWeight) > 3;
+  const bigJump = weight != null && lastWeight != null && !editing && Math.abs(weight - lastWeight) > 3;
 
   const save = async () => {
-    if (!allValid || !hasContent || needsDupChoice) return;
+    if (!allValid || !hasContent) return;
     setSaving(true);
     try {
-      const payload = { date, time, weight: parseDecimal(weight), bodyFat: parseDecimal(bodyFat), measurements: parsedMeas, note: note.trim().slice(0, 1000) };
+      const payload = { date, time, weight, bodyFat: parseDecimal(bodyFat), measurements: parsedMeas, note: note.trim().slice(0, 1000) };
       if (editing) {
         await updateEntry({ ...editing, ...payload });
         toast('Запись обновлена', { tone: 'success' });
-      } else if (dupAction === 'replace' && sameDay.length) {
-        const target = sameDay[sameDay.length - 1];
-        // keep values the user didn't re-enter
-        await updateEntry({
-          ...target,
-          time,
-          weight: payload.weight ?? target.weight,
-          bodyFat: payload.bodyFat ?? target.bodyFat,
-          measurements: { ...target.measurements, ...payload.measurements },
-          note: payload.note || target.note,
-        });
-        toast('Запись за этот день обновлена', { tone: 'success' });
       } else {
         await addEntry(payload);
         toast(payload.weight != null ? `Сохранено: ${fmtKg(payload.weight)}` : 'Сохранено', { tone: 'success' });
@@ -111,7 +95,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
 
   const remove = async () => {
     if (!editing) return;
-    const ok = await confirm({ title: 'Удалить запись?', text: `Запись от ${formatDate(editing.date)}, ${editing.time} будет удалена.`, confirm: 'Удалить', danger: true });
+    const ok = await confirm({ title: 'Удалить запись?', text: `${formatDate(editing.date)}, ${editing.time}`, confirm: 'Удалить', danger: true });
     if (!ok) return;
     const backup = editing;
     await deleteEntry(editing.id);
@@ -124,11 +108,13 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
     });
   };
 
+  const title = editing ? 'Запись' : mode === 'note' ? 'Заметка' : mode === 'measurements' ? 'Параметры тела' : 'Вес';
+
   return (
     <Sheet
       open
       onClose={onClose}
-      title={editing ? 'Редактировать запись' : noteMode ? 'Заметка' : opts.focus === 'measurements' ? 'Параметры тела' : 'Вес'}
+      title={title}
       footer={
         <>
           {editing && (
@@ -137,81 +123,61 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
             </button>
           )}
           <button className="btn" onClick={onClose}>Отмена</button>
-          <button className="btn primary" disabled={!allValid || !hasContent || needsDupChoice || saving} onClick={save} data-testid="entry-save">
+          <button className="btn primary" disabled={!allValid || !hasContent || saving} onClick={save} data-testid="entry-save">
             Сохранить
           </button>
         </>
       }
     >
       <form
-        className="stack"
+        className="stack entry-form"
         onSubmit={(e) => {
           e.preventDefault();
           void save();
         }}
       >
-        {!noteMode && (
-        <NumberField
-          label="Вес"
-          big
-          value={weight}
-          onChange={setWeight}
-          suffix="кг"
-          min={LIMITS.weight.min} typical={TYPICAL.weight}
-          max={LIMITS.weight.max}
-          placeholder={lastWeight != null ? fmtNum(lastWeight, 2) : '0,0'}
-          autoFocus={opts.focus !== 'measurements'}
-          testId="entry-weight"
-          hint={lastWeight != null ? `Последний раз: ${fmtKg(lastWeight)}` : 'Можно внести только вес — остальное необязательно'}
-        />
-        )}
-        {bigJump && (
-          <Notice tone="warn">Разница с прошлым измерением больше 3 кг. Проверь значение — если всё верно, это может быть колебание воды.</Notice>
-        )}
-        <div className="grid-2">
-          <div className="field">
-            <label htmlFor="entry-date">Дата</label>
-            <input id="entry-date" className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+        <button type="button" className="when" aria-expanded={showWhen} onClick={() => setShowWhen((v) => !v)}>
+          <Icon name="clock" size={16} />
+          <span className="num">{isToday ? 'Сегодня' : formatDate(date, { weekday: true })}, {time}</span>
+          <Icon name="down" size={15} style={{ transform: showWhen ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }} />
+        </button>
+        {showWhen && (
+          <div className="grid-2 fade-up">
+            <div className="field">
+              <label htmlFor="entry-date">Дата</label>
+              <input id="entry-date" className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="entry-time">Время</label>
+              <input id="entry-time" className="input" type="time" value={time} onChange={(e) => e.target.value && setTime(e.target.value)} />
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="entry-time">Время</label>
-            <input id="entry-time" className="input" type="time" value={time} onChange={(e) => e.target.value && setTime(e.target.value)} />
-          </div>
-        </div>
-        {futureDate && <Notice tone="warn">Это будущая дата — проверь, всё ли верно.</Notice>}
+        )}
+        {futureDate && <Notice tone="warn">Это будущая дата.</Notice>}
 
-        {!noteMode && (needsDupChoice || (!editing && sameDay.length > 0)) ? (
-          <div className="dup">
-            <Notice tone="info">
-              За {formatDate(date)} уже есть {sameDay.length === 1 ? 'запись' : `${sameDay.length} записи`} ({sameDay.map((e) => `${e.time}${e.weight != null ? ` · ${fmtKg(e.weight)}` : ''}`).join(', ')}). Что сделать?
-            </Notice>
-            <ChipGroup
-              label="Действие с записью за день"
-              value={dupAction ?? ('' as 'replace')}
-              onChange={(v) => setDupAction(v as 'replace' | 'add')}
-              options={[
-                { value: 'replace', label: 'Обновить существующую' },
-                { value: 'add', label: 'Добавить ещё одно измерение' },
-              ]}
-            />
-            {dupAction === 'add' && <span className="field-hint">Несколько взвешиваний за день усредняются в графиках и прогнозе.</span>}
-          </div>
+        {weight != null ? (
+          <>
+            <WeightWheel value={weight} onChange={setWeight} />
+            {bigJump && <p className="field-warn center">На {fmtNum(Math.abs(weight - lastWeight!), 2)} кг отличается от прошлого раза — проверь значение.</p>}
+          </>
+        ) : mode !== 'note' && editing ? (
+          <button type="button" className="link-btn" onClick={() => setWeight(lastWeight ?? 70)}>+ Добавить вес</button>
         ) : null}
 
-        {!noteMode && (
-        <button type="button" className="disclosure" aria-expanded={showMore} onClick={() => setShowMore((v) => !v)}>
-          <Icon name="ruler" size={19} />
-          <span className="grow">Процент жира и измерения тела</span>
-          <Icon name="down" size={18} style={{ transform: showMore ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }} />
-        </button>
+        {mode !== 'note' && !showBody && (
+          <button type="button" className="disclosure" onClick={() => setShowBody(true)}>
+            <Icon name="ruler" size={18} />
+            <span className="grow">Параметры тела</span>
+            <Icon name="plus" size={16} />
+          </button>
         )}
-        {showMore && !noteMode && (
+        {showBody && mode !== 'note' && (
           <div className="stack fade-up">
-            <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} typical={TYPICAL.bodyFat} max={LIMITS.bodyFat.max} hint="Со смарт-весов, калипера или по формуле ниже" />
+            <NumberField label="Процент жира" value={bodyFat} onChange={setBodyFat} suffix="%" min={LIMITS.bodyFat.min} typical={TYPICAL.bodyFat} max={LIMITS.bodyFat.max} />
             {navy != null && parseDecimal(bodyFat) == null && (
               <div className="row between navy">
                 <span className="small">
-                  Оценка по обхватам (метод ВМС США): <span className="num strong">{fmtNum(navy, 2)}%</span>
+                  По обхватам: <span className="num strong">{fmtNum(navy, 2)}%</span>
                 </span>
                 <button type="button" className="btn sm" onClick={() => setBodyFat(fmtNum(navy, 2))}>Подставить</button>
               </div>
@@ -226,19 +192,28 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
                     value={meas[k] ?? ''}
                     onChange={(v) => setMeas((m) => ({ ...m, [k]: v }))}
                     suffix={unit}
-                    min={LIMITS.measurement.min} typical={TYPICAL.measurement}
+                    min={LIMITS.measurement.min}
+                    typical={TYPICAL.measurement}
                     max={LIMITS.measurement.max}
-                    hint={k in MEASUREMENT_HINTS ? MEASUREMENT_HINTS[k as keyof typeof MEASUREMENT_HINTS] : undefined}
                   />
                 );
               })}
             </div>
           </div>
         )}
-        <div className="field">
-          <label htmlFor="entry-note">Заметка</label>
-          <textarea id="entry-note" className="input" autoFocus={noteMode} rows={noteMode ? 5 : 3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Самочувствие, сон, тренировка, особенности питания…" />
-        </div>
+
+        {!showNote ? (
+          <button type="button" className="disclosure" onClick={() => setShowNote(true)}>
+            <Icon name="note" size={18} />
+            <span className="grow">Заметка</span>
+            <Icon name="plus" size={16} />
+          </button>
+        ) : (
+          <div className="field">
+            {mode !== 'note' && <label htmlFor="entry-note">Заметка</label>}
+            <textarea id="entry-note" className="input" autoFocus={mode === 'note'} rows={mode === 'note' ? 5 : 3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Сон, самочувствие, тренировка…" aria-label="Заметка" />
+          </div>
+        )}
         <button type="submit" hidden />
       </form>
     </Sheet>

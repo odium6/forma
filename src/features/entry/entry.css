@@ -1,8 +1,12 @@
-.disclosure {
-  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 0 14px;
-  border-radius: var(--r-sm); border: 1px dashed var(--border-strong); background: transparent; color: var(--text-2);
-  font-weight: 540; text-align: left;
+.entry-form { gap: var(--s-3); }
+.when {
+  align-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px;
+  border-radius: 999px; border: 0; background: var(--surface-2); color: var(--text-secondary); font-size: var(--t-secondary); font-weight: 560;
 }
-.disclosure[aria-expanded='true'] { border-style: solid; background: var(--surface-2); color: var(--text); }
-.dup { display: flex; flex-direction: column; gap: 10px; }
-.navy { padding: 10px 12px; border-radius: var(--r-sm); background: var(--lime-soft); }
+.disclosure {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 0 4px;
+  border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+  font-weight: 560; text-align: left;
+}
+.disclosure + .disclosure { border-top: 1px solid var(--border); }
+.navy { padding: 10px 12px; border-radius: var(--r-sm); background: var(--primary-soft); }
