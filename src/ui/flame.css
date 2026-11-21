@@ -1,0 +1,24 @@
+.flame { flex: none; display: block; overflow: visible; }
+.flame.unlit { color: var(--text-tertiary); opacity: 0.6; }
+.flame.animated .flame-outer { transform-origin: 50% 100%; transform-box: fill-box; animation: flame-flicker 1.8s ease-in-out infinite alternate; }
+.flame.animated .flame-inner { transform-origin: 50% 100%; transform-box: fill-box; animation: flame-core 1.2s ease-in-out infinite alternate; }
+.flame.animated { filter: drop-shadow(0 6px 18px rgb(255 120 30 / 0.45)); animation: flame-glow 2.4s ease-in-out infinite alternate; }
+
+@keyframes flame-flicker {
+  0% { transform: scale(1, 1) skewX(0deg); }
+  30% { transform: scale(0.97, 1.04) skewX(-2deg); }
+  60% { transform: scale(1.02, 0.97) skewX(1.5deg); }
+  100% { transform: scale(0.99, 1.05) skewX(-1deg); }
+}
+@keyframes flame-core {
+  0% { transform: scale(1, 1) translateY(0); }
+  50% { transform: scale(0.92, 1.08) translateY(-1px); }
+  100% { transform: scale(1.04, 0.95) translateY(1px); }
+}
+@keyframes flame-glow {
+  from { filter: drop-shadow(0 6px 14px rgb(255 120 30 / 0.35)); }
+  to { filter: drop-shadow(0 8px 24px rgb(255 150 40 / 0.6)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flame.animated, .flame.animated .flame-outer, .flame.animated .flame-inner { animation: none; }
+}

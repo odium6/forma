@@ -46,7 +46,7 @@ function useSectionSummary(): Record<SectionId, string> {
     profile: profile ? [profile.name, `${profile.heightCm.toString().replace('.', ',')} см`].filter(Boolean).join(' · ') : '',
     goal: data.maintenance?.enabled ? 'Поддержание веса' : s.target != null ? `${s.target.toString().replace('.', ',')} кг` : 'Не задана',
     appearance: `${theme}${settings.glass === 'reduced' ? ' · без стекла' : ''}`,
-    notifications: settings.pushId ? `Фоновые · ${activeRem} ${plural(activeRem, ['напоминание', 'напоминания', 'напоминаний'])}` : activeRem ? `${activeRem} ${plural(activeRem, ['напоминание', 'напоминания', 'напоминаний'])}` : 'Выключены',
+    notifications: settings.pushId || settings.notificationsEnabled ? `Включены · ${activeRem} ${plural(activeRem, ['напоминание', 'напоминания', 'напоминаний'])}` : 'Выключены',
     privacy: settings.pin ? `PIN включён${settings.biometricCredentialId ? ' · биометрия' : ''}` : 'Без PIN',
     data: settings.lastBackupAt ? `Копия ${formatDate(new Date(settings.lastBackupAt).toISOString().slice(0, 10))}` : 'Копий ещё не было',
     about: `Версия ${__APP_VERSION__}`,
@@ -250,13 +250,13 @@ function NotificationsSection() {
     try {
       if (!v) {
         await disableServerPush();
-        toast('Фоновые уведомления выключены');
+        toast('Уведомления выключены');
         return;
       }
       const r = await enableServerPush();
       setPerm(notificationPermission());
       const msg: Record<typeof r, string> = {
-        ok: 'Фоновые уведомления включены',
+        ok: 'Уведомления включены',
         denied: 'Разрешение на уведомления не выдано. Его можно включить в настройках браузера или iOS.',
         unsupported: 'Этот браузер не поддерживает push-уведомления',
         'not-configured': 'Сервер уведомлений не настроен в этой сборке',
@@ -289,22 +289,17 @@ function NotificationsSection() {
         </Notice>
       ) : (
         <>
-          {serverPush && pushSupported() && (
+          {serverPush && pushSupported() ? (
             <ToggleRow
               icon="bell"
-              title="Уведомления при закрытом приложении"
-              hint={
-                perm === 'denied'
-                  ? 'Запрещены в настройках браузера'
-                  : 'Вес, фото и заметки никуда не передаются'
-              }
+              title="Уведомления"
+              hint={perm === 'denied' ? 'Запрещены в настройках телефона' : 'Приходят, даже когда FORMA закрыта'}
               checked={pushOn && perm === 'granted'}
               onChange={toggleServerPush}
               disabled={pushBusy || perm === 'denied'}
             />
-          )}
-          {!pushOn && (
-            <ToggleRow icon="bell" title="Напоминания в приложении" hint={perm === 'denied' ? 'Запрещены в настройках браузера' : 'Пока FORMA открыта'} checked={settings.notificationsEnabled && perm === 'granted'} onChange={enable} disabled={perm === 'denied'} />
+          ) : (
+            <ToggleRow icon="bell" title="Уведомления" hint={perm === 'denied' ? 'Запрещены в настройках телефона' : undefined} checked={settings.notificationsEnabled && perm === 'granted'} onChange={enable} disabled={perm === 'denied'} />
           )}
         </>
       )}

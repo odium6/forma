@@ -160,6 +160,8 @@ export interface Reminder {
   days: number[]; // 0 = Monday … 6 = Sunday
   parity: WeekParity;
   createdAt: number;
+  /** Set for a streak reminder attached to a habit. */
+  habitId?: string;
 }
 
 export interface Settings {
@@ -181,6 +183,8 @@ export interface Settings {
   includePhotosInReports: boolean;
   /** Device token for server push reminders (null = only in-app reminders). */
   pushId: string | null;
+  /** What the big flame on the home screen counts: 'weigh' or a habit id. */
+  mainStreak: string | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -200,6 +204,7 @@ export const DEFAULT_SETTINGS: Settings = {
   persistentStorage: null,
   includePhotosInReports: false,
   pushId: null,
+  mainStreak: null,
 };
 
 /** Everything except photo binaries: small enough to keep in memory. */

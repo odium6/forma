@@ -126,6 +126,7 @@ export const reminderSchema = z.object({
   days: z.array(z.number().int().min(0).max(6)).max(7),
   parity: z.enum(['all', 'even', 'odd']),
   createdAt: ts,
+  habitId: z.string().max(80).optional(),
 });
 
 export const settingsSchema = z
@@ -142,6 +143,7 @@ export const settingsSchema = z
     autoLockMinutes: z.number().int().min(0).max(60),
     lastBackupAt: ts.nullable(),
     includePhotosInReports: z.boolean(),
+    mainStreak: z.string().max(80).nullable(),
   })
   .partial();
 

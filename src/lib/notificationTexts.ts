@@ -23,7 +23,8 @@ export function pick<T>(variants: readonly T[], seed: string): T {
   return variants[hash(seed) % variants.length];
 }
 
-export function reminderText(r: Pick<Reminder, 'kind' | 'label'>, seed: string, motivation: boolean): string {
+export function reminderText(r: Pick<Reminder, 'kind' | 'label' | 'habitId'>, seed: string, motivation: boolean): string {
+  if (r.kind === 'custom' && r.habitId) return pick(['Отметь привычку — пусть огонёк горит дальше 🔥', 'Огонёк ждёт сегодняшней отметки 🔥', 'Не дай огоньку погаснуть — отметь привычку 🔥'], seed);
   if (r.kind === 'custom') return r.label;
   const base = pick(NOTIFICATION_TEXTS[r.kind], seed);
   return motivation ? `${base} ${pick(NOTIFICATION_TEXTS.motivation, `${seed}m`)}` : base;

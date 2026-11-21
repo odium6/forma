@@ -70,13 +70,13 @@ test('полный сценарий FORMA', async ({ page, context }) => {
 
   // ── entry: weight + measurements, duplicate-day handling ──
   await page.getByTestId('home-add-weight').click();
-  // wheel picker starts at the last weight (80,00): one kilogram down, then 60 hundredths up
+  // wheel picker starts at the last weight (80,00): one kilogram down, then 0,60 in 0,05 steps
   const kg = page.getByTestId('wheel-kg');
   await expect(kg).toHaveAttribute('aria-valuetext', '80');
   await kg.press('ArrowUp');
   await expect(kg).toHaveAttribute('aria-valuetext', '79');
   const frac = page.getByTestId('wheel-frac');
-  for (let i = 0; i < 6; i++) await frac.press('PageDown');
+  for (let i = 0; i < 12; i++) await frac.press('ArrowDown');
   await expect(frac).toHaveAttribute('aria-valuetext', '60');
   await page.getByRole('button', { name: 'Параметры тела' }).click();
   await page.getByLabel('Бёдра').fill('101');

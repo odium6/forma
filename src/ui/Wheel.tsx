@@ -120,19 +120,23 @@ export function Wheel<T extends number>({
 }
 
 const KG = Array.from({ length: 281 }, (_, i) => i + 20);
-const FRAC = Array.from({ length: 100 }, (_, i) => i);
+const FRAC = Array.from({ length: 20 }, (_, i) => i * 5);
 
-/** Weight picker: whole kilograms + hundredths, two wheels side by side. */
+/**
+ * Weight picker: whole kilograms + hundredths in 0,05 kg steps. Each wheel spans half of the
+ * picker, so a swipe anywhere — not only on the digits — turns it.
+ */
 export function WeightWheel({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const kg = Math.max(20, Math.min(300, Math.floor(value + 1e-9)));
-  const frac = Math.max(0, Math.min(99, Math.round((value - kg) * 100)));
+  const snapped = Math.round(value * 20) / 20;
+  const kg = Math.max(20, Math.min(300, Math.floor(snapped + 1e-9)));
+  const frac = Math.max(0, Math.min(95, Math.round((snapped - kg) * 100)));
   const set = (k: number, f: number) => onChange(Math.round((k + f / 100) * 100) / 100);
   return (
     <div className="weight-wheel" role="group" aria-label="Вес">
       <div className="wheel-band" aria-hidden="true" />
       <Wheel values={KG} value={kg} onChange={(k) => set(k, frac)} label="Килограммы" className="wheel-kg" testId="wheel-kg" />
+      <Wheel values={FRAC} value={frac} onChange={(f) => set(kg, f)} format={(f) => String(f).padStart(2, '0')} label="Сотые килограмма, шаг 0,05" className="wheel-frac" testId="wheel-frac" />
       <span className="wheel-sep" aria-hidden="true">,</span>
-      <Wheel values={FRAC} value={frac} onChange={(f) => set(kg, f)} format={(f) => String(f).padStart(2, '0')} label="Сотые килограмма" className="wheel-frac" testId="wheel-frac" />
       <span className="wheel-unit" aria-hidden="true">кг</span>
     </div>
   );

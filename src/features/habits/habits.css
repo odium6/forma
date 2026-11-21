@@ -55,3 +55,5 @@
 .color-pick { display: flex; gap: 10px; flex-wrap: wrap; }
 .color-pick button { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--border-strong); padding: 0; }
 .color-pick button[aria-pressed='true'] { box-shadow: 0 0 0 2.5px var(--text); }
+.habit-flame { display: inline-flex; align-items: center; gap: 3px; font-size: var(--t-secondary); font-weight: 650; color: #e8772e; flex: none; }
+:root[data-theme='dark'] .habit-flame { color: #ffa94d; }

@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
 import { PageHeader } from '@/app/Layout';
 import type { AppData, Habit, HabitSchedule } from '@/domain/types';
-import { deleteHabit, saveHabit, setHabitLog, useData } from '@/state/store';
+import { deleteHabit, deleteReminder, saveHabit, saveReminder, setHabitLog, useData } from '@/state/store';
 import { addDays, formatDate, formatDateShort, rangeDays, startOfWeek, today, weekday, WEEKDAYS_SHORT } from '@/lib/dates';
 import { HABIT_PRESETS, describeSchedule, habitStats, indexLogs, isDoneValue, isScheduledOn, logValue, withSchedule, type HabitStats, type LogIndex } from '@/lib/habits';
 import { fmtPct, uid } from '@/lib/format';
-import { EmptyState, NumberField, Segmented, fieldValid } from '@/ui/controls';
+import { EmptyState, NumberField, Segmented, ToggleRow, fieldValid } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
 import { useFeedback } from '@/ui/feedback';
 import { Icon } from '@/ui/Icon';
+import { Flame } from '@/ui/Flame';
 import './habits.css';
 
 const ICONS = ['💧', '🥗', '🍎', '🥦', '🚫', '🥤', '🍔', '🍫', '🥐', '🏋️', '🏃', '🚶', '🧘', '🚴', '🏊', '👟', '🌙', '😴', '☀️', '📖', '💊', '🧠', '🫁', '❤️'];
@@ -144,7 +144,6 @@ function HabitCard({ habit: h, stats: s, idx, onOpen }: { habit: Habit; stats: H
           <span className="habit-sub">
             {sched}
             {h.kind !== 'check' ? ` · ${h.kind === 'limit' ? '≤ ' : ''}${h.target} ${h.unit}` : ''}
-            {s.current > 1 ? ` · ${s.current} ${s.unit === 'week' ? 'нед.' : 'дн.'} подряд` : ''}
           </span>
           <span className="week-dots" aria-label={`На этой неделе выполнено: ${doneWeek}`}>
             {week.map((day) => {
@@ -157,6 +156,11 @@ function HabitCard({ habit: h, stats: s, idx, onOpen }: { habit: Habit; stats: H
           </span>
         </span>
       </button>
+      {s.current > 0 && (
+        <span className="habit-flame num" aria-label={`${s.current} ${s.unit === 'week' ? 'нед.' : 'дн.'} подряд`}>
+          <Flame size={16} /> {s.current}
+        </span>
+      )}
       {s.todayScheduled ? <HabitControl habit={h} date={d} value={s.todayValue} compact /> : <span className="xs faint">не сегодня</span>}
     </article>
   );
@@ -184,6 +188,8 @@ function HabitDetail({ data, habit: h, idx, onClose, onEdit }: { data: AppData; 
             onClick={async () => {
               if (await confirm({ title: 'Удалить привычку?', text: 'Вся история отметок этой привычки будет удалена без возможности восстановления. Можно вместо этого отправить её в архив.', danger: true, confirm: 'Удалить навсегда' })) {
                 await deleteHabit(h.id);
+                const rem = data.reminders.find((r) => r.habitId === h.id);
+                if (rem) await deleteReminder(rem.id);
                 onClose();
                 toast('Привычка удалена');
               }
@@ -262,6 +268,10 @@ type SchedType = HabitSchedule['type'];
 
 function HabitEditor({ habit, onClose, count }: { habit: Habit | null; onClose: () => void; count: number }) {
   const { toast } = useFeedback();
+  const { reminders } = useData();
+  const existingRem = habit ? reminders.find((r) => r.habitId === habit.id) ?? null : null;
+  const [remind, setRemind] = useState(existingRem?.enabled ?? false);
+  const [remTime, setRemTime] = useState(existingRem?.time ?? '20:00');
   const cur = habit?.schedules[habit.schedules.length - 1].schedule;
   const [name, setName] = useState(habit?.name ?? '');
   const [icon, setIcon] = useState(habit?.icon ?? '💧');
@@ -292,6 +302,13 @@ function HabitEditor({ habit, onClose, count }: { habit: Habit | null; onClose: 
       unit: kind === 'check' ? '' : unit.trim().slice(0, 16),
       schedules: changed ? withSchedule(habit, schedule, d) : base.schedules,
     });
+    const label = `🔥 ${name.trim().slice(0, 60)}`;
+    if (remind) {
+      const days = schedule.type === 'weekdays' ? schedule.days : [0, 1, 2, 3, 4, 5, 6];
+      await saveReminder({ id: existingRem?.id ?? uid(), enabled: true, label, kind: 'custom', time: remTime, days, parity: 'all', createdAt: existingRem?.createdAt ?? Date.now(), habitId: base.id });
+    } else if (existingRem) {
+      await deleteReminder(existingRem.id);
+    }
     toast(habit ? 'Привычка обновлена' : 'Привычка создана', { tone: 'success' });
     onClose();
   };
@@ -388,12 +405,13 @@ function HabitEditor({ habit, onClose, count }: { habit: Habit | null; onClose: 
           <span className="field-hint">Новое расписание действует с сегодняшнего дня. Прошлые дни и рекорд серии не пересчитываются.</span>
         )}
       </div>
-      <div className="field">
-        <span className="field-label">Напоминание</span>
-        <Link to="/settings/notifications" className="hint-link" onClick={onClose}>
-          <Icon name="bell" size={17} /> <span className="grow">Напоминание о привычках настраивается в уведомлениях</span> <Icon name="right" size={16} />
-        </Link>
-      </div>
+      <ToggleRow icon="bell" title="Напоминать, чтобы огонёк не погас" checked={remind} onChange={setRemind} />
+      {remind && (
+        <div className="field fade-up">
+          <label htmlFor="h-rem">Время напоминания</label>
+          <input id="h-rem" className="input" type="time" value={remTime} onChange={(e) => e.target.value && setRemTime(e.target.value)} />
+        </div>
+      )}
     </Sheet>
   );
 }

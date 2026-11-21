@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Menu } from 'glisse';
 import { useData, setHabitLog, saveSettings } from '@/state/store';
+import { goalProgress } from '@/lib/math/progress';
 import { computeSummary, STATUS_TEXT, type Summary } from '@/lib/summary';
 import { habitStats, indexLogs, isDoneValue } from '@/lib/habits';
 import { formatDate, today } from '@/lib/dates';
@@ -9,6 +10,10 @@ import { fmtKg, fmtNum, fmtSigned } from '@/lib/format';
 import { WeightChart } from '@/features/charts/WeightChart';
 import { useOpenEntry } from '@/features/entry/EntrySheet';
 import { Icon } from '@/ui/Icon';
+import { Flame } from '@/ui/Flame';
+import { Sheet } from '@/ui/Sheet';
+import { mainStreak, streakTargets, weighStreak } from '@/lib/streaks';
+import { plural } from '@/lib/format';
 import type { AppData } from '@/domain/types';
 import type { IconName } from '@/ui/Icon';
 import type { ThemeMode } from '@/domain/types';
@@ -20,14 +25,6 @@ const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: IconName }[] = [
   { mode: 'system', label: 'Как в системе', icon: 'monitor' },
 ];
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return 'Доброй ночи';
-  if (h < 12) return 'Доброе утро';
-  if (h < 18) return 'Добрый день';
-  return 'Добрый вечер';
-}
-
 export function HomePage() {
   const data = useData();
   const nav = useNavigate();
@@ -38,11 +35,8 @@ export function HomePage() {
     <div className="page home">
       <header className="page-head home-head">
         <div className="grow">
-          <p className="t-caption">{formatDate(today(), { weekday: true })}</p>
-          <h1 className="home-greet">
-            {greeting()}
-            {data.profile?.name ? `, ${data.profile.name}` : ''}
-          </h1>
+          <h1 className="sr-only">Главная</h1>
+          <p className="home-date">{formatDate(today(), { weekday: true })}</p>
         </div>
         <Menu
           aria-label="Быстрые действия"
@@ -63,6 +57,7 @@ export function HomePage() {
 
       <div className="dash">
         <div className="col">
+          <StreakCard data={data} />
           <HeroCard s={s} />
           {s.points.length > 0 && (
             <section className="card" aria-labelledby="chart-h">
@@ -102,14 +97,17 @@ function HeroCard({ s }: { s: Summary }) {
 
   const m = s.maintenance;
   const g = s.goal;
-  const fromStart = g ? s.current! - g.startWeight : null;
-  const pct = s.progress ? Math.round(s.progress.fraction * 100) : null;
+  // the hero shows the weight the user actually entered last; the smoothed trend lives in charts
+  const now = s.latest!.value;
+  const fromStart = g ? now - g.startWeight : null;
+  const prog = g && s.target != null ? goalProgress(g.startWeight, s.target, now) : null;
+  const pct = prog ? Math.round(prog.fraction * 100) : null;
 
   return (
     <section className="card hero" aria-label="Прогресс к цели">
       <span className="t-caption">Текущий вес</span>
       <div className="hero-value">
-        <span className="t-display num" data-testid="current-weight">{fmtNum(s.current!, 2)}</span>
+        <span className="t-display num" data-testid="current-weight">{fmtNum(now, 2)}</span>
         <span className="hero-unit">кг</span>
       </div>
       {fromStart != null && !m && Math.abs(fromStart) >= 0.01 && (
@@ -126,8 +124,8 @@ function HeroCard({ s }: { s: Summary }) {
 
       {m ? (
         <MaintenanceBand s={s} />
-      ) : g && s.target != null && s.progress ? (
-        <Journey start={g.startWeight} target={s.target} fraction={s.progress.fraction} left={s.progress.leftKg} reached={s.progress.state === 'reached'} />
+      ) : g && s.target != null && prog ? (
+        <Journey start={g.startWeight} target={s.target} fraction={prog.fraction} left={prog.leftKg} reached={prog.state === 'reached'} />
       ) : null}
       <AddRow />
       <span className="sr-only" data-testid="status">{status.title}</span>
@@ -219,6 +217,7 @@ function TodayCard({ data }: { data: AppData }) {
   const openEntry = useOpenEntry();
   const d = today();
   const weighed = data.entries.some((e) => e.date === d && e.weight != null);
+  const ws = weighStreak(data, d);
   const idx = indexLogs(data.habitLogs);
   const habits = data.habits.filter((h) => !h.archivedAt).map((h) => ({ h, s: habitStats(h, idx, d) })).filter((x) => x.s.todayScheduled);
   const total = habits.length + 1;
@@ -240,6 +239,7 @@ function TodayCard({ data }: { data: AppData }) {
           <button className="today-name" onClick={() => openEntry({ focus: 'weight' })}>
             <Icon name="scale" size={17} className="today-ico" /> Взвешивание
           </button>
+          <StreakBadge count={ws.count} />
         </div>
         {habits.map(({ h, s }) => (
           <div key={h.id} className={`list-item today-row${s.todayDone ? ' done' : ''}`}>
@@ -258,6 +258,7 @@ function TodayCard({ data }: { data: AppData }) {
             <Link to="/habits" className="today-name">
               <span aria-hidden="true" className="today-emoji">{h.icon}</span> {h.name}
             </Link>
+            <StreakBadge count={s.current} week={s.unit === 'week'} />
           </div>
         ))}
         {habits.length === 0 && (
@@ -271,5 +272,59 @@ function TodayCard({ data }: { data: AppData }) {
         )}
       </div>
     </section>
+  );
+}
+
+function StreakCard({ data }: { data: AppData }) {
+  const [choosing, setChoosing] = useState(false);
+  const st = mainStreak(data);
+  const word = st.unit === 'week' ? plural(st.count, ['неделя', 'недели', 'недель']) : plural(st.count, ['день', 'дня', 'дней']);
+  return (
+    <>
+      <button className="card streak-card" onClick={() => setChoosing(true)} aria-label={`Огонёк: ${st.label}, ${st.count} ${word} подряд. Сменить цель огонька`} data-testid="main-flame">
+        <Flame size={76} lit={st.count > 0} animated />
+        <span className="streak-text">
+          <span className="streak-count num">
+            {st.count} <span className="streak-word">{word} подряд</span>
+          </span>
+          <span className="streak-target">
+            {st.icon} {st.label}
+            {st.todayDone ? <span className="streak-ok"> · сегодня ✓</span> : <span className="faint"> · сегодня ещё нет</span>}
+          </span>
+        </span>
+        <Icon name="right" size={18} className="chev" />
+      </button>
+      <Sheet open={choosing} onClose={() => setChoosing(false)} title="Огонёк для чего?" size="sm">
+        <div className="list">
+          {streakTargets(data).map((t) => (
+            <button
+              key={t.id}
+              className="list-item"
+              aria-pressed={t.id === st.id}
+              onClick={() => {
+                void saveSettings({ mainStreak: t.id });
+                setChoosing(false);
+              }}
+            >
+              <Flame size={22} lit={t.count > 0} />
+              <span className="list-text">
+                <span className="list-title">{t.icon} {t.label}</span>
+                <span className="list-sub num">{t.count} {t.unit === 'week' ? 'нед.' : 'дн.'} подряд</span>
+              </span>
+              {t.id === st.id && <Icon name="check" size={18} className="accent" />}
+            </button>
+          ))}
+        </div>
+      </Sheet>
+    </>
+  );
+}
+
+function StreakBadge({ count, week }: { count: number; week?: boolean }) {
+  if (count <= 0) return null;
+  return (
+    <span className="streak-badge num" title={`${count} ${week ? 'нед.' : 'дн.'} подряд`} aria-label={`${count} ${week ? 'нед.' : 'дн.'} подряд`}>
+      <Flame size={14} /> {count}
+    </span>
   );
 }

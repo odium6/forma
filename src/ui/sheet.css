@@ -29,6 +29,7 @@
   max-width: 100vw;
 }
 .sheet-grip {
+  touch-action: none;
   width: 38px; height: 5px; border-radius: 9px; background: var(--border-strong);
   margin: 8px auto 0; flex: none;
 }
