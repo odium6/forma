@@ -1,7 +1,7 @@
 import { buildPushHTTPRequest } from '@pushforge/builder';
 import { z } from 'zod';
 import { reminderSchema } from '../../src/lib/backup/schema';
-import { applySnooze, dueDeliveries, EMPTY_STATE, wallClock, wallDate, type SubConfig, type SubState } from './schedule';
+import { applySnooze, dueDeliveries, EMPTY_STATE, wakeDelivery, wallClock, wallDate, type SubConfig, type SubState } from './schedule';
 
 /**
  * FORMA push Worker (Cloudflare Workers Free + D1).
@@ -38,10 +38,11 @@ const putBody = z.object({
   motivation: z.boolean(),
   snoozeMinutes: z.number().int().min(5).max(240),
   skipIfDone: z.boolean().optional().default(false),
+  repeatMinutes: z.number().int().min(0).max(240).optional().default(15),
 });
 const endpointBody = z.object({ id, subscription });
 const idBody = z.object({ id });
-const doneBody = z.object({ id, kind: z.enum(['weigh', 'habits', 'photo']), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
+const doneBody = z.object({ id, kind: z.string().regex(/^(weigh|habits|photo|habit:[A-Za-z0-9_-]{1,80})$/), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
 const actionBody = z.object({ id, reminderId: z.string().max(80), action: z.enum(['snooze', 'skip']) });
 
 function cors(req: Request, env: Env): Record<string, string> {
@@ -90,15 +91,33 @@ async function saveState(env: Env, subId: string, state: SubState) {
 async function handle(req: Request, env: Env): Promise<Response> {
   const h = cors(req, env);
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h });
+  const url = new URL(req.url);
+  const { pathname } = url;
+
+  // wake-up trigger from iPhone Shortcuts (no browser Origin); the device token is the secret
+  if (pathname === '/v1/wake' && (req.method === 'GET' || req.method === 'POST')) {
+    const parsed = id.safeParse(url.searchParams.get('id') ?? '');
+    if (!parsed.success) return new Response('bad id', { status: 400 });
+    const s = await loadState(env, parsed.data);
+    if (!s) return new Response('unknown', { status: 404 });
+    const st = s.state as SubState & { lastWake?: number };
+    if (Date.now() - (st.lastWake ?? 0) < 20 * 60_000) return new Response('ok: already sent recently', { status: 200 });
+    const cfg = JSON.parse(s.row.config) as SubConfig;
+    const { delivery, state } = wakeDelivery(cfg, s.state, new Date(), s.row.tz);
+    await saveState(env, s.row.id, { ...state, lastWake: Date.now() } as SubState);
+    if (!delivery) return new Response('ok: already weighed or skipped today', { status: 200 });
+    const status = await sendPush(env, s.row, { title: delivery.title, body: delivery.body, url: delivery.url, tag: delivery.tag, reminderId: delivery.reminder.id, kind: 'weigh', sub: s.row.id });
+    return new Response(status < 300 ? 'ok: reminder sent' : `push failed: ${status}`, { status: 200 });
+  }
+
   if (!h['Access-Control-Allow-Origin'] && req.method !== 'GET') return json({ error: 'origin' }, 403, h);
-  const { pathname } = new URL(req.url);
 
   if (pathname === '/v1/health') return json({ ok: true }, 200, h);
 
   if (pathname === '/v1/subscription' && req.method === 'PUT') {
     const b = await readJson(req, putBody);
     if (!b) return json({ error: 'invalid' }, 400, h);
-    const cfg: SubConfig = { reminders: b.reminders, quietHours: b.quietHours, motivation: b.motivation, snoozeMinutes: b.snoozeMinutes, skipIfDone: b.skipIfDone };
+    const cfg: SubConfig = { reminders: b.reminders, quietHours: b.quietHours, motivation: b.motivation, snoozeMinutes: b.snoozeMinutes, skipIfDone: b.skipIfDone, repeatMinutes: b.repeatMinutes };
     await env.DB.prepare(
       `INSERT INTO subs (id, endpoint, p256dh, auth, tz, config, state, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
        ON CONFLICT(id) DO UPDATE SET endpoint = ?2, p256dh = ?3, auth = ?4, tz = ?5, config = ?6, updated_at = ?8`,

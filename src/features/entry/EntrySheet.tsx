@@ -10,6 +10,7 @@ import { NumberField, fieldValid, Notice } from '@/ui/controls';
 import { WeightWheel } from '@/ui/Wheel';
 import { useFeedback } from '@/ui/feedback';
 import { Icon } from '@/ui/Icon';
+import { skipToday } from '@/lib/push';
 import './entry.css';
 
 interface OpenOpts {
@@ -213,6 +214,20 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
             {mode !== 'note' && <label htmlFor="entry-note">Заметка</label>}
             <textarea id="entry-note" className="input" autoFocus={mode === 'note'} rows={mode === 'note' ? 5 : 3} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Сон, самочувствие, тренировка…" aria-label="Заметка" />
           </div>
+        )}
+        {mode === 'weight' && !editing && isToday && (
+          <button
+            type="button"
+            className="link-btn cant-today"
+            onClick={async () => {
+              await skipToday('weigh');
+              toast('Хорошо, сегодня больше не напомню');
+              onClose();
+            }}
+            data-testid="cant-today"
+          >
+            Сегодня не могу взвеситься
+          </button>
         )}
         <button type="submit" hidden />
       </form>

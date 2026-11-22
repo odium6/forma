@@ -174,6 +174,8 @@ export interface Settings {
   snoozeMinutes: number;
   /** Skip a reminder when its action (weighing, photo, habits) is already done today. */
   skipIfDone: boolean;
+  /** Repeat an unanswered reminder every N minutes until done (0 = once). */
+  repeatMinutes: number;
   pin: { hash: string; salt: string; iterations: number } | null;
   biometricCredentialId: string | null;
   lockScope: 'photos' | 'app';
@@ -196,6 +198,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quietHours: { enabled: true, start: '22:30', end: '07:00' },
   snoozeMinutes: 30,
   skipIfDone: false,
+  repeatMinutes: 15,
   pin: null,
   biometricCredentialId: null,
   lockScope: 'photos',

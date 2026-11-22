@@ -10,6 +10,8 @@ import { fmtKg, fmtNum, fmtSigned } from '@/lib/format';
 import { WeightChart } from '@/features/charts/WeightChart';
 import { useOpenEntry } from '@/features/entry/EntrySheet';
 import { Icon } from '@/ui/Icon';
+import { useFeedback } from '@/ui/feedback';
+import { skippedToday, skipToday } from '@/lib/push';
 import { Flame } from '@/ui/Flame';
 import { Sheet } from '@/ui/Sheet';
 import { mainStreak, streakTargets, weighStreak } from '@/lib/streaks';
@@ -136,6 +138,8 @@ function HeroCard({ s }: { s: Summary }) {
 
 function AddRow() {
   const openEntry = useOpenEntry();
+  const { toast } = useFeedback();
+  const [, setTick] = useState(0);
   return (
     <div className="add-row">
       <button className="btn primary lg grow" onClick={() => openEntry({ focus: 'weight' })} data-testid="home-add-weight">
@@ -148,6 +152,17 @@ function AddRow() {
         items={[
           { label: 'Параметры тела', icon: <Icon name="ruler" size={18} />, onSelect: () => openEntry({ focus: 'measurements' }) },
           { label: 'Заметка', icon: <Icon name="note" size={18} />, onSelect: () => openEntry({ focus: 'note' }) },
+          'separator',
+          {
+            label: 'Сегодня не могу взвеситься',
+            icon: <Icon name="close" size={18} />,
+            onSelect: () => {
+              void skipToday('weigh').then(() => {
+                setTick((t) => t + 1);
+                toast('Хорошо, сегодня больше не напомню');
+              });
+            },
+          },
         ]}
       />
     </div>
@@ -239,6 +254,7 @@ function TodayCard({ data }: { data: AppData }) {
           <button className="today-name" onClick={() => openEntry({ focus: 'weight' })}>
             <Icon name="scale" size={17} className="today-ico" /> Взвешивание
           </button>
+          {!weighed && skippedToday('weigh') && <span className="t-caption">не сегодня</span>}
           <StreakBadge count={ws.count} />
         </div>
         {habits.map(({ h, s }) => (

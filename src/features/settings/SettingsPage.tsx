@@ -15,7 +15,7 @@ import { createBackup, parseBackup, restoreBackup, type BackupSummary } from '@/
 import type { BackupFile } from '@/lib/backup/schema';
 import { entriesCSV, habitsCSV, saveFile, stamp } from '@/lib/export/files';
 import { biometricsAvailable, hashPin, isValidPin, registerBiometric } from '@/lib/security';
-import { disableServerPush, enableServerPush, pushSupported, sendTestPush, serverPushConfigured } from '@/lib/push';
+import { disableServerPush, enableServerPush, pushSupported, sendTestPush, serverPushConfigured, wakeLink } from '@/lib/push';
 import { GoalCard } from '@/features/progress/GoalCard';
 import { ChipGroup, NumberField, Notice, Segmented, ToggleRow, fieldValid } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
@@ -313,11 +313,21 @@ function NotificationsSection() {
         </div>
       )}
       <div className="field" style={{ margin: '8px 0 4px' }}>
+        <label htmlFor="repeat">Повторять, пока не сделано</label>
+        <select id="repeat" className="input" value={settings.repeatMinutes} onChange={(e) => void saveSettings({ repeatMinutes: Number(e.target.value) })}>
+          <option value={15}>Каждые 15 минут</option>
+          <option value={30}>Каждые 30 минут</option>
+          <option value={60}>Каждый час</option>
+          <option value={0}>Не повторять</option>
+        </select>
+      </div>
+      <div className="field" style={{ marginTop: 12 }}>
         <label htmlFor="snooze">«Отложить» на</label>
         <select id="snooze" className="input" value={settings.snoozeMinutes} onChange={(e) => void saveSettings({ snoozeMinutes: Number(e.target.value) })}>
           {[10, 15, 30, 60, 120].map((m) => <option key={m} value={m}>{m} минут</option>)}
         </select>
       </div>
+      <WakeLink />
       <div className="row between" style={{ marginTop: 16 }}>
         <h3>Расписание</h3>
         <button className="btn sm" onClick={() => setEditing(newReminder())} data-testid="add-reminder"><Icon name="plus" size={16} /> Добавить</button>
@@ -688,5 +698,51 @@ function AboutSection() {
       </p>
       <a className="small licenses" href="third-party-licenses.txt" target="_blank" rel="noopener">Лицензии</a>
     </section>
+  );
+}
+
+/** iPhone Shortcuts hook: a personal automation calls this link when the user wakes up. */
+function WakeLink() {
+  const { settings } = useData();
+  const { toast } = useFeedback();
+  const [open, setOpen] = useState(false);
+  const link = settings.pushId ? wakeLink() : null;
+  if (!link) return null;
+  return (
+    <div className="wake">
+      <button type="button" className="list-item" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <span className="list-icon tint"><Icon name="sun" size={18} /></span>
+        <span className="list-text">
+          <span className="list-title">Напомнить сразу после пробуждения</span>
+          <span className="list-sub">Через «Команды» на iPhone</span>
+        </span>
+        <Icon name="down" size={16} className="chev" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }} />
+      </button>
+      {open && (
+        <div className="wake-body fade-up">
+          <ol className="small">
+            <li>Открой «Команды» → «Автоматизация» → «+».</li>
+            <li>Выбери «Пробуждение» (режим сна) или «Будильник» → «Остановлен».</li>
+            <li>«Запускать сразу» → новая команда → действие «Получить содержимое URL».</li>
+            <li>Вставь ссылку ниже.</li>
+          </ol>
+          <button
+            type="button"
+            className="btn sm"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(link);
+                toast('Ссылка скопирована', { tone: 'success' });
+              } catch {
+                toast('Не удалось скопировать', { tone: 'error' });
+              }
+            }}
+          >
+            Скопировать ссылку
+          </button>
+          <p className="xs faint">Ссылка личная — не публикуй её.</p>
+        </div>
+      )}
+    </div>
   );
 }

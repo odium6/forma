@@ -2,6 +2,8 @@ import { getState, saveSettings, subscribe as subscribeStore } from '@/state/sto
 import { today } from '@/lib/dates';
 import { habitStats, indexLogs } from '@/lib/habits';
 import { notificationPermission, requestNotificationPermission } from '@/lib/notify';
+import { getDB } from '@/db/db';
+import type { Reminder } from '@/domain/types';
 
 /**
  * Background reminders via Web Push. The app subscribes the device with the browser's
@@ -58,6 +60,7 @@ function payload(id: string, sub: PushSubscription) {
     motivation: s.settings.motivation,
     snoozeMinutes: s.settings.snoozeMinutes,
     skipIfDone: s.settings.skipIfDone,
+    repeatMinutes: s.settings.repeatMinutes,
   };
 }
 
@@ -122,12 +125,18 @@ async function sync() {
     const d = today();
     const idx = indexLogs(s.habitLogs);
     const habits = s.habits.filter((h) => !h.archivedAt).map((h) => habitStats(h, idx, d)).filter((x) => x.todayScheduled);
-    const done: Record<'weigh' | 'photo' | 'habits', boolean> = {
+    const done: Record<string, boolean> = {
       weigh: s.entries.some((e) => e.date === d && e.weight != null),
       photo: s.photos.some((p) => p.date === d),
       habits: habits.length > 0 && habits.every((x) => x.todayDone),
     };
-    for (const kind of ['weigh', 'photo', 'habits'] as const) {
+    // each habit separately, so its streak reminder stops repeating once it is marked
+    for (const r of s.reminders) {
+      if (!r.habitId) continue;
+      const h = s.habits.find((x) => x.id === r.habitId);
+      if (h) done[`habit:${h.id}`] = habitStats(h, idx, d).todayDone;
+    }
+    for (const kind of Object.keys(done)) {
       const key = `${kind}|${d}`;
       if (done[kind] && !doneSent.has(key)) {
         const res = await api('/v1/done', 'POST', { id, kind, date: d });
@@ -154,4 +163,39 @@ export function startPushSync(): () => void {
     document.removeEventListener('visibilitychange', onVis);
     window.removeEventListener('online', schedule);
   };
+}
+
+const SKIP_KEY = 'forma-skip-';
+
+/** "Can't today": stops today's reminders (and their repeats) of this kind, on the server and locally. */
+export async function skipToday(kind: Reminder['kind']): Promise<void> {
+  const s = getState();
+  const d = today();
+  try {
+    localStorage.setItem(SKIP_KEY + kind, d);
+  } catch {
+    /* private mode */
+  }
+  const rems = s.reminders.filter((r) => r.enabled && r.kind === kind);
+  const id = s.settings.pushId;
+  const db = await getDB();
+  for (const r of rems) {
+    const st = (await db.get('reminderState', r.id)) ?? { id: r.id, lastFiredAt: null, snoozedUntil: null, snoozeCount: 0, skipDate: null };
+    await db.put('reminderState', { ...st, skipDate: d, snoozedUntil: null });
+    if (id && serverPushConfigured()) await api('/v1/action', 'POST', { id, reminderId: r.id, action: 'skip' }).catch(() => undefined);
+  }
+}
+
+export function skippedToday(kind: Reminder['kind']): boolean {
+  try {
+    return localStorage.getItem(SKIP_KEY + kind) === today();
+  } catch {
+    return false;
+  }
+}
+
+/** Link for an iPhone Shortcuts automation ("Пробуждение" / alarm stopped): sends the weighing reminder now. */
+export function wakeLink(): string | null {
+  const id = getState().settings.pushId;
+  return id && PUSH_API ? `${PUSH_API}/v1/wake?id=${id}` : null;
 }

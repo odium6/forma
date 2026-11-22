@@ -38,9 +38,9 @@ self.addEventListener('push', (event) => {
   }
   const actions = d.reminderId
     ? [
-        { action: 'enter', title: d.kind === 'weigh' ? 'Внести данные' : 'Открыть' },
+        { action: 'enter', title: d.kind === 'weigh' ? 'Внести вес' : 'Открыть' },
+        { action: 'skip', title: d.kind === 'weigh' ? 'Сегодня не могу' : 'Не сегодня' },
         { action: 'snooze', title: 'Отложить' },
-        { action: 'skip', title: 'Пропустить сегодня' },
       ]
     : [];
   event.waitUntil(

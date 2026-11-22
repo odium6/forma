@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySnooze, dueDeliveries, EMPTY_STATE, MAX_SNOOZES, wallClock, type SubConfig } from '../../worker/src/schedule';
+import { applySnooze, dueDeliveries, EMPTY_STATE, MAX_SNOOZES, wakeDelivery, wallClock, type SubConfig } from '../../worker/src/schedule';
 import type { Reminder } from '@/domain/types';
 
 const rem = (over: Partial<Reminder> = {}): Reminder => ({ id: 'r1', enabled: true, label: 'Вес', kind: 'weigh', time: '08:00', days: [0, 1, 2, 3, 4, 5, 6], parity: 'all', createdAt: 0, ...over });
@@ -72,4 +72,52 @@ describe('push schedule (server)', () => {
     const without = dueDeliveries(cfg(), EMPTY_STATE, at('2026-01-05T05:00:30Z'), 'Europe/Moscow').deliveries[0].body;
     expect(withMot.length).toBeGreaterThan(without.length);
   });
+
+  it('repeats every 15 minutes until the weighing is done', () => {
+    const tz = 'Europe/Moscow';
+    const first = dueDeliveries(cfg(), EMPTY_STATE, at('2026-01-05T05:00:20Z'), tz);
+    expect(first.deliveries).toHaveLength(1);
+    expect(dueDeliveries(cfg(), first.state, at('2026-01-05T05:10:00Z'), tz).deliveries).toHaveLength(0);
+    const r1 = dueDeliveries(cfg(), first.state, at('2026-01-05T05:15:20Z'), tz);
+    expect(r1.deliveries).toHaveLength(1);
+    const r2 = dueDeliveries(cfg(), r1.state, at('2026-01-05T05:30:20Z'), tz);
+    expect(r2.deliveries).toHaveLength(1);
+    // weighed in the app → stops
+    const done = { ...r2.state, done: { weigh: '2026-01-05' } };
+    expect(dueDeliveries(cfg(), done, at('2026-01-05T05:45:20Z'), tz).deliveries).toHaveLength(0);
+    // "can't today" → stops
+    const skipped = { ...r2.state, skip: { r1: '2026-01-05' } };
+    expect(dueDeliveries(cfg(), skipped, at('2026-01-05T05:45:20Z'), tz).deliveries).toHaveLength(0);
+  });
+
+  it('does not repeat when turned off, during quiet hours or for plain custom reminders', () => {
+    const tz = 'Europe/Moscow';
+    const off = cfg({ repeatMinutes: 0 });
+    const s0 = dueDeliveries(off, EMPTY_STATE, at('2026-01-05T05:00:20Z'), tz).state;
+    expect(dueDeliveries(off, s0, at('2026-01-05T05:15:20Z'), tz).deliveries).toHaveLength(0);
+    const custom = cfg({ reminders: [rem({ kind: 'custom', label: 'Вода' })] });
+    const s1 = dueDeliveries(custom, EMPTY_STATE, at('2026-01-05T05:00:20Z'), tz).state;
+    expect(dueDeliveries(custom, s1, at('2026-01-05T05:15:20Z'), tz).deliveries).toHaveLength(0);
+    const late = cfg({ reminders: [rem({ time: '22:00' })], quietHours: { enabled: true, start: '22:10', end: '07:00' } });
+    const s2 = dueDeliveries(late, EMPTY_STATE, at('2026-01-05T19:00:20Z'), tz).state; // 22:00 Moscow
+    expect(dueDeliveries(late, s2, at('2026-01-05T19:15:20Z'), tz).deliveries).toHaveLength(0); // 22:15 is quiet
+  });
+
+  it('habit streak reminders repeat until that habit is marked', () => {
+    const tz = 'Europe/Moscow';
+    const c = cfg({ reminders: [rem({ kind: 'custom', label: '🔥 Вода', habitId: 'h1' })] });
+    const s0 = dueDeliveries(c, EMPTY_STATE, at('2026-01-05T05:00:20Z'), tz).state;
+    expect(dueDeliveries(c, s0, at('2026-01-05T05:15:20Z'), tz).deliveries).toHaveLength(1);
+    expect(dueDeliveries(c, { ...s0, done: { 'habit:h1': '2026-01-05' } }, at('2026-01-05T05:15:20Z'), tz).deliveries).toHaveLength(0);
+  });
+
+  it('wake trigger sends the weighing reminder now and replaces the later scheduled one', () => {
+    const tz = 'Europe/Moscow';
+    const w = wakeDelivery(cfg(), EMPTY_STATE, at('2026-01-05T03:40:00Z'), tz); // 06:40, reminder at 08:00
+    expect(w.delivery?.url).toBe('./#/?entry=1');
+    expect(dueDeliveries(cfg(), w.state, at('2026-01-05T05:00:20Z'), tz).deliveries.filter((d) => d.tag === 'forma-r1').length).toBeLessThanOrEqual(1);
+    expect(dueDeliveries(cfg(), w.state, at('2026-01-05T03:55:20Z'), tz).deliveries).toHaveLength(1); // repeat 15 min later
+    expect(wakeDelivery(cfg(), { ...EMPTY_STATE, done: { weigh: '2026-01-05' } }, at('2026-01-05T03:40:00Z'), tz).delivery).toBeNull();
+  });
 });
+
