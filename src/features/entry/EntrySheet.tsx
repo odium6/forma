@@ -70,12 +70,16 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
     Object.values(meas).every((v) => fieldValid(v ?? '', LIMITS.measurement.min, LIMITS.measurement.max));
   const hasContent = weight != null || parseDecimal(bodyFat) != null || Object.keys(parsedMeas).length > 0 || note.trim().length > 0;
   const isToday = date === today();
+  // another weighing already on this day: the user chooses to replace it or keep both
+  const sameDayWeight = !editing && weight != null ? [...data.entries].reverse().find((e) => e.date === date && e.weight != null) ?? null : null;
+  const [dup, setDup] = useState<'replace' | 'add' | null>(null);
+  const needsChoice = sameDayWeight != null && dup == null;
   const futureDate = date > today();
   const navy = data.profile ? navyBodyFat(data.profile.sex, data.profile.heightCm, parsedMeas.waist, parsedMeas.neck, parsedMeas.hips) : null;
   const bigJump = weight != null && lastWeight != null && !editing && Math.abs(weight - lastWeight) > 3;
 
   const save = async () => {
-    if (!allValid || !hasContent) return;
+    if (!allValid || !hasContent || needsChoice) return;
     setSaving(true);
     try {
       const payload = { date, time, weight, bodyFat: parseDecimal(bodyFat), measurements: parsedMeas, note: note.trim().slice(0, 1000) };
@@ -83,7 +87,9 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
         await updateEntry({ ...editing, ...payload });
         toast('Запись обновлена', { tone: 'success' });
       } else {
-        await addEntry(payload);
+        if (sameDayWeight && dup === 'replace') {
+          await updateEntry({ ...sameDayWeight, time, weight, bodyFat: payload.bodyFat ?? sameDayWeight.bodyFat, measurements: { ...sameDayWeight.measurements, ...payload.measurements }, note: payload.note || sameDayWeight.note });
+        } else await addEntry(payload);
         toast(payload.weight != null ? `Сохранено: ${fmtKg(payload.weight)}` : 'Сохранено', { tone: 'success' });
       }
       onClose();
@@ -124,7 +130,7 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
             </button>
           )}
           <button className="btn" onClick={onClose}>Отмена</button>
-          <button className="btn primary" disabled={!allValid || !hasContent || saving} onClick={save} data-testid="entry-save">
+          <button className="btn primary" disabled={!allValid || !hasContent || needsChoice || saving} onClick={save} data-testid="entry-save">
             Сохранить
           </button>
         </>
@@ -164,6 +170,17 @@ function EntryForm({ opts, onClose }: { opts: OpenOpts; onClose: () => void }) {
         ) : mode !== 'note' && editing ? (
           <button type="button" className="link-btn" onClick={() => setWeight(lastWeight ?? 70)}>+ Добавить вес</button>
         ) : null}
+        {sameDayWeight && (
+          <div className="dup-choice" role="group" aria-label="Вес за этот день уже есть">
+            <p className="small">
+              {isToday ? 'Сегодня' : formatDate(date)} уже внесён вес <span className="num strong">{fmtKg(sameDayWeight.weight!)}</span> в {sameDayWeight.time}.
+            </p>
+            <div className="dup-btns">
+              <button type="button" className="chip" aria-pressed={dup === 'replace'} onClick={() => setDup('replace')} data-testid="dup-replace">Заменить</button>
+              <button type="button" className="chip" aria-pressed={dup === 'add'} onClick={() => setDup('add')} data-testid="dup-add">Добавить новую запись</button>
+            </div>
+          </div>
+        )}
 
         {mode !== 'note' && !showBody && (
           <button type="button" className="disclosure" onClick={() => setShowBody(true)}>

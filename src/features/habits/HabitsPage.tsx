@@ -201,6 +201,8 @@ function HabitDetail({ data, habit: h, idx, onClose, onEdit }: { data: AppData; 
             className="btn"
             onClick={async () => {
               await saveHabit({ ...h, archivedAt: h.archivedAt ? null : Date.now() });
+              const rem = data.reminders.find((r) => r.habitId === h.id);
+              if (rem) await saveReminder({ ...rem, enabled: !!h.archivedAt });
               toast(h.archivedAt ? 'Привычка восстановлена' : 'Привычка в архиве; история сохранена');
               onClose();
             }}

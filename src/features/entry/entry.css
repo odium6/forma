@@ -12,3 +12,5 @@
 .navy { padding: 10px 12px; border-radius: var(--r-sm); background: var(--primary-soft); }
 
 .cant-today { align-self: center; color: var(--text-tertiary) !important; font-weight: 560; font-size: var(--t-secondary); margin-top: 4px; }
+.dup-choice { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--warning-soft); }
+.dup-btns { display: flex; gap: 8px; flex-wrap: wrap; }

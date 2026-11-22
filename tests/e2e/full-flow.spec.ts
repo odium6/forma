@@ -78,6 +78,10 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   const frac = page.getByTestId('wheel-frac');
   for (let i = 0; i < 12; i++) await frac.press('ArrowDown');
   await expect(frac).toHaveAttribute('aria-valuetext', '60');
+  // the onboarding weight is already today: choose to keep both readings
+  await expect(page.getByText(/уже внесён вес/)).toBeVisible();
+  await expect(page.getByTestId('entry-save')).toBeDisabled();
+  await page.getByTestId('dup-add').click();
   await page.getByRole('button', { name: 'Параметры тела' }).click();
   await page.getByLabel('Бёдра').fill('101');
   await page.getByTestId('entry-save').click();

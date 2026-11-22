@@ -103,7 +103,8 @@ function HeroCard({ s, data }: { s: Summary; data: AppData }) {
   const g = s.goal;
   // the hero shows the weight the user actually entered last; the smoothed trend lives in charts
   // exactly what was entered last (several readings on one day are averaged in s.latest)
-  const now = [...data.entries].reverse().find((e) => e.weight != null)?.weight ?? s.latest!.value;
+  const d0 = today();
+  const now = [...data.entries].reverse().find((e) => e.weight != null && e.date <= d0)?.weight ?? s.latest!.value;
   const fromStart = g ? now - g.startWeight : null;
   const prog = g && s.target != null ? goalProgress(g.startWeight, s.target, now) : null;
   const pct = prog ? Math.round(prog.fraction * 100) : null;

@@ -7,7 +7,7 @@ import type { ActivityLevel, Reminder, Sex } from '@/domain/types';
 import { deleteReminder, refreshAfterImport, saveProfile, saveReminder, saveSettings, useData, wipeAll } from '@/state/store';
 import { computeSummary } from '@/lib/summary';
 import { ACTIVITY_LABELS, LIMITS, TYPICAL } from '@/lib/math/body';
-import { formatDate, WEEKDAYS_SHORT } from '@/lib/dates';
+import { formatDate, toISODate, WEEKDAYS_SHORT } from '@/lib/dates';
 import { parseDecimal, plural, uid } from '@/lib/format';
 import { describeReminder, nextOccurrence, remindersToICS } from '@/lib/reminders';
 import { isIOS, isStandalone, notificationPermission, requestNotificationPermission, showReminder, type PermissionState } from '@/lib/notify';
@@ -48,7 +48,7 @@ function useSectionSummary(): Record<SectionId, string> {
     appearance: `${theme}${settings.glass === 'reduced' ? ' · без стекла' : ''}`,
     notifications: settings.pushId || settings.notificationsEnabled ? `Включены · ${activeRem} ${plural(activeRem, ['напоминание', 'напоминания', 'напоминаний'])}` : 'Выключены',
     privacy: settings.pin ? `PIN включён${settings.biometricCredentialId ? ' · биометрия' : ''}` : 'Без PIN',
-    data: settings.lastBackupAt ? `Копия ${formatDate(new Date(settings.lastBackupAt).toISOString().slice(0, 10))}` : 'Копий ещё не было',
+    data: settings.lastBackupAt ? `Копия ${formatDate(toISODate(new Date(settings.lastBackupAt)))}` : 'Копий ещё не было',
     about: `Версия ${__APP_VERSION__}`,
   };
 }
@@ -345,7 +345,7 @@ function NotificationsSection() {
                   <span className="strong">{r.label}</span>
                   <span className="small muted" style={{ display: 'block' }}>
                     {describeReminder(r)}
-                    {r.enabled && next ? ` · след.: ${formatDate(next.toISOString().slice(0, 10))} ${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}` : !r.enabled ? ' · выключено' : ''}
+                    {r.enabled && next ? ` · след.: ${formatDate(toISODate(next))} ${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}` : !r.enabled ? ' · выключено' : ''}
                   </span>
                 </span>
                 <Icon name="right" size={18} className="faint" />
@@ -616,7 +616,7 @@ function DataSection() {
               </button>
             )}
           </dd>
-          {data.settings.lastBackupAt && <><dt>Последняя копия</dt><dd>{formatDate(new Date(data.settings.lastBackupAt).toISOString().slice(0, 10))}</dd></>}
+          {data.settings.lastBackupAt && <><dt>Последняя копия</dt><dd>{formatDate(toISODate(new Date(data.settings.lastBackupAt)))}</dd></>}
         </dl>
         <div className="divider" />
         <button

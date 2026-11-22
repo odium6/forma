@@ -40,10 +40,10 @@ export async function verifyPin(pin: string, stored: { hash: string; salt: strin
   return diff === 0;
 }
 
-/** Simple escalating lockout after wrong attempts, kept in sessionStorage. */
+/** Escalating lockout after wrong attempts; kept in localStorage so closing the app doesn't reset it. */
 export function lockoutRemainingMs(): number {
   try {
-    const until = Number(sessionStorage.getItem('forma-lock-until') ?? 0);
+    const until = Number(localStorage.getItem('forma-lock-until') ?? 0);
     return Math.max(0, until - Date.now());
   } catch {
     return 0;
@@ -52,11 +52,11 @@ export function lockoutRemainingMs(): number {
 
 export function registerFailedAttempt(): number {
   try {
-    const n = Number(sessionStorage.getItem('forma-fails') ?? 0) + 1;
-    sessionStorage.setItem('forma-fails', String(n));
+    const n = Number(localStorage.getItem('forma-fails') ?? 0) + 1;
+    localStorage.setItem('forma-fails', String(n));
     if (n >= 5) {
       const wait = Math.min(300_000, 15_000 * 2 ** (n - 5));
-      sessionStorage.setItem('forma-lock-until', String(Date.now() + wait));
+      localStorage.setItem('forma-lock-until', String(Date.now() + wait));
       return wait;
     }
   } catch {
@@ -67,8 +67,8 @@ export function registerFailedAttempt(): number {
 
 export function resetAttempts() {
   try {
-    sessionStorage.removeItem('forma-fails');
-    sessionStorage.removeItem('forma-lock-until');
+    localStorage.removeItem('forma-fails');
+    localStorage.removeItem('forma-lock-until');
   } catch {
     /* ignore */
   }

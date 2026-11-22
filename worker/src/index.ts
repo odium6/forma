@@ -17,8 +17,20 @@ interface Env {
 }
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{32,64}$/);
+
+/** Only browser push services may be used as endpoints, so the Worker can't be pointed at arbitrary hosts. */
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /(^|\.)push\.apple\.com$/, /\.notify\.windows\.com$/];
+function isPushService(u: string): boolean {
+  try {
+    const url = new URL(u);
+    return url.protocol === 'https:' && !url.port && PUSH_HOSTS.some((re) => re.test(url.hostname));
+  } catch {
+    return false;
+  }
+}
+const MAX_SUBS = 5000;
 const subscription = z.object({
-  endpoint: z.string().url().max(1000).refine((u) => u.startsWith('https://'), 'https only'),
+  endpoint: z.string().url().max(1000).refine(isPushService, 'not a push service'),
   keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }),
 });
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -117,6 +129,11 @@ async function handle(req: Request, env: Env): Promise<Response> {
   if (pathname === '/v1/subscription' && req.method === 'PUT') {
     const b = await readJson(req, putBody);
     if (!b) return json({ error: 'invalid' }, 400, h);
+    const known = await env.DB.prepare('SELECT 1 FROM subs WHERE id = ?').bind(b.id).first();
+    if (!known) {
+      const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM subs').first<{ n: number }>();
+      if ((n?.n ?? 0) >= MAX_SUBS) return json({ error: 'full' }, 503, h);
+    }
     const cfg: SubConfig = { reminders: b.reminders, quietHours: b.quietHours, motivation: b.motivation, snoozeMinutes: b.snoozeMinutes, skipIfDone: b.skipIfDone, repeatMinutes: b.repeatMinutes };
     await env.DB.prepare(
       `INSERT INTO subs (id, endpoint, p256dh, auth, tz, config, state, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
