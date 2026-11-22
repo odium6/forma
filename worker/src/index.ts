@@ -108,18 +108,33 @@ async function handle(req: Request, env: Env): Promise<Response> {
 
   // wake-up trigger from iPhone Shortcuts (no browser Origin); the device token is the secret
   if (pathname === '/v1/wake' && (req.method === 'GET' || req.method === 'POST')) {
+    // readable from the FORMA page (the "Проверить" button) and from Shortcuts
+    const text = (body: string, code = 200) => new Response(body, { status: code, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...h } });
     const parsed = id.safeParse(url.searchParams.get('id') ?? '');
-    if (!parsed.success) return new Response('bad id', { status: 400 });
+    if (!parsed.success) return text('Ссылка повреждена', 400);
     const s = await loadState(env, parsed.data);
-    if (!s) return new Response('unknown', { status: 404 });
-    const st = s.state as SubState & { lastWake?: number };
-    if (Date.now() - (st.lastWake ?? 0) < 20 * 60_000) return new Response('ok: already sent recently', { status: 200 });
+    if (!s) return text('Ссылка устарела: включи уведомления в FORMA заново и скопируй новую ссылку', 404);
+    const st = s.state as SubState & { lastWake?: number; lastTest?: number };
+    const now = Date.now();
+
+    // test=1: always send a sample, change nothing else
+    if (url.searchParams.get('test') === '1') {
+      if (now - (st.lastTest ?? 0) < 20_000) return text('Подожди 20 секунд и попробуй снова', 429);
+      await saveState(env, s.row.id, { ...s.state, lastTest: now } as SubState);
+      const status = await sendPush(env, s.row, { title: 'Взвешивание', body: 'Проверка: так придёт напоминание после будильника.', url: './#/?entry=1', tag: 'forma-wake-test', reminderId: '', kind: 'weigh', sub: s.row.id });
+      return text(status < 300 ? 'Готово: проверочное уведомление отправлено' : `Не удалось отправить (${status})`);
+    }
+
+    if (now - (st.lastWake ?? 0) < 5 * 60_000) return text('Напоминание уже отправлено несколько минут назад');
     const cfg = JSON.parse(s.row.config) as SubConfig;
     const { delivery, state } = wakeDelivery(cfg, s.state, new Date(), s.row.tz);
-    await saveState(env, s.row.id, { ...state, lastWake: Date.now() } as SubState);
-    if (!delivery) return new Response('ok: already weighed or skipped today', { status: 200 });
+    if (!delivery) {
+      await saveState(env, s.row.id, state);
+      return text('Сегодня вес уже внесён (или нажато «Сегодня не могу») — напоминание не нужно');
+    }
+    await saveState(env, s.row.id, { ...state, lastWake: now } as SubState);
     const status = await sendPush(env, s.row, { title: delivery.title, body: delivery.body, url: delivery.url, tag: delivery.tag, reminderId: delivery.reminder.id, kind: 'weigh', sub: s.row.id });
-    return new Response(status < 300 ? 'ok: reminder sent' : `push failed: ${status}`, { status: 200 });
+    return text(status < 300 ? 'Готово: напоминание о взвешивании отправлено' : `Не удалось отправить (${status})`);
   }
 
   if (!h['Access-Control-Allow-Origin'] && req.method !== 'GET') return json({ error: 'origin' }, 403, h);
@@ -141,6 +156,8 @@ async function handle(req: Request, env: Env): Promise<Response> {
     )
       .bind(b.id, b.subscription.endpoint, b.subscription.keys.p256dh, b.subscription.keys.auth, b.timeZone, JSON.stringify(cfg), JSON.stringify(EMPTY_STATE), Date.now())
       .run();
+    // the same device registered again under a new id (e.g. after restoring data): keep only the newest
+    await env.DB.prepare('DELETE FROM subs WHERE endpoint = ? AND id != ?').bind(b.subscription.endpoint, b.id).run();
     return json({ ok: true }, 200, h);
   }
 

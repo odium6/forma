@@ -1,4 +1,4 @@
-import { getState, saveSettings, subscribe as subscribeStore } from '@/state/store';
+import { getState, saveReminder, saveSettings, subscribe as subscribeStore } from '@/state/store';
 import { today } from '@/lib/dates';
 import { habitStats, indexLogs } from '@/lib/habits';
 import { notificationPermission, requestNotificationPermission } from '@/lib/notify';
@@ -198,4 +198,25 @@ export function skippedToday(kind: Reminder['kind']): boolean {
 export function wakeLink(): string | null {
   const id = getState().settings.pushId;
   return id && PUSH_API ? `${PUSH_API}/v1/wake?id=${id}` : null;
+}
+
+const DEFAULT_WEIGH_FLAG = 'forma-default-weigh-v1';
+
+/** With notifications on there should be a weighing reminder; the default is every day at 07:00. */
+export async function ensureWeighReminder(): Promise<void> {
+  const s = getState();
+  if (s.reminders.some((r) => r.kind === 'weigh')) return;
+  await saveReminder({ id: crypto.randomUUID(), enabled: true, label: 'Взвешивание', kind: 'weigh', time: '07:00', days: [0, 1, 2, 3, 4, 5, 6], parity: 'all', createdAt: Date.now() });
+}
+
+/** One-time: users who already had notifications on but no weighing reminder get the 07:00 default. */
+export async function migrateDefaultWeighReminder(): Promise<void> {
+  try {
+    if (localStorage.getItem(DEFAULT_WEIGH_FLAG)) return;
+    localStorage.setItem(DEFAULT_WEIGH_FLAG, '1');
+  } catch {
+    return;
+  }
+  const s = getState().settings;
+  if (s.pushId || s.notificationsEnabled) await ensureWeighReminder();
 }

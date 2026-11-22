@@ -162,6 +162,7 @@ export function wakeDelivery(cfg: SubConfig, state: SubState, nowUtc: Date, time
   const next: SubState = { ...state, fired: { ...state.fired }, nag: { ...(state.nag ?? {}) } };
   const weigh = cfg.reminders.filter((r) => r.enabled && r.kind === 'weigh');
   if (state.done.weigh === today || weigh.some((r) => state.skip[r.id] === today)) return { delivery: null, state };
+  if (weigh.some((r) => { const n = state.nag?.[r.id]; return n && n.date === today && nowUtc.getTime() - n.last < 5 * 60_000; })) return { delivery: null, state };
   for (const r of weigh) {
     const occ = nextOccurrence(r, new Date(wall.getTime() - 60_000), cfg.quietHours);
     if (occ && wallDate(occ) === today) next.fired[r.id] = Math.max(next.fired[r.id] ?? 0, occ.getTime());

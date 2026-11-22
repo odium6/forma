@@ -8,7 +8,7 @@ import { EntryProvider, useOpenEntry } from '@/features/entry/EntrySheet';
 import { FeedbackProvider, useFeedback } from '@/ui/feedback';
 import { ACHIEVEMENTS } from '@/lib/achievements';
 import { startReminderScheduler } from '@/lib/notify';
-import { startPushSync } from '@/lib/push';
+import { startPushSync, migrateDefaultWeighReminder } from '@/lib/push';
 import { useServiceWorker } from '@/app/pwa';
 import { HomePage } from '@/features/home/HomePage';
 import { LogoMark } from '@/ui/Logo';
@@ -78,6 +78,7 @@ function Shell() {
 
   useEffect(() => startReminderScheduler(), []);
   useEffect(() => startPushSync(), []);
+  useEffect(() => void migrateDefaultWeighReminder(), []);
 
   if (!data.settings.onboarded) {
     return (

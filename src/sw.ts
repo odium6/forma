@@ -40,7 +40,6 @@ self.addEventListener('push', (event) => {
     ? [
         { action: 'enter', title: d.kind === 'weigh' ? 'Внести вес' : 'Открыть' },
         { action: 'skip', title: d.kind === 'weigh' ? 'Сегодня не могу' : 'Не сегодня' },
-        { action: 'snooze', title: 'Отложить' },
       ]
     : [];
   event.waitUntil(

@@ -119,5 +119,20 @@ describe('push schedule (server)', () => {
     expect(dueDeliveries(cfg(), w.state, at('2026-01-05T03:55:20Z'), tz).deliveries).toHaveLength(1); // repeat 15 min later
     expect(wakeDelivery(cfg(), { ...EMPTY_STATE, done: { weigh: '2026-01-05' } }, at('2026-01-05T03:40:00Z'), tz).delivery).toBeNull();
   });
+
+  it('wake right after a scheduled send does not double it; the 07:00 slot is never sent twice', () => {
+    const tz = 'Europe/Moscow';
+    const sent = dueDeliveries(cfg(), EMPTY_STATE, at('2026-01-05T05:00:20Z'), tz).state; // 08:00 sent
+    expect(wakeDelivery(cfg(), sent, at('2026-01-05T05:02:00Z'), tz).delivery).toBeNull();
+    // woke at 07:40 for an 08:00 reminder: one stream of repeats, nothing extra at 08:00
+    let st = wakeDelivery(cfg(), EMPTY_STATE, at('2026-01-05T04:40:00Z'), tz).state;
+    const times = ['04:55', '05:00', '05:10'];
+    const counts = times.map((t) => {
+      const r = dueDeliveries(cfg(), st, at(`2026-01-05T${t}:20Z`), tz);
+      st = r.state;
+      return r.deliveries.length;
+    });
+    expect(counts).toEqual([1, 0, 1]);
+  });
 });
 

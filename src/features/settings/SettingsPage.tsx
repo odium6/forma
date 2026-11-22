@@ -15,7 +15,7 @@ import { createBackup, parseBackup, restoreBackup, type BackupSummary } from '@/
 import type { BackupFile } from '@/lib/backup/schema';
 import { entriesCSV, habitsCSV, saveFile, stamp } from '@/lib/export/files';
 import { biometricsAvailable, hashPin, isValidPin, registerBiometric } from '@/lib/security';
-import { disableServerPush, enableServerPush, pushSupported, sendTestPush, serverPushConfigured, wakeLink } from '@/lib/push';
+import { disableServerPush, enableServerPush, ensureWeighReminder, pushSupported, sendTestPush, serverPushConfigured, wakeLink } from '@/lib/push';
 import { GoalCard } from '@/features/progress/GoalCard';
 import { ChipGroup, NumberField, Notice, Segmented, ToggleRow, fieldValid } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
@@ -238,6 +238,7 @@ function NotificationsSection() {
       }
     }
     await saveSettings({ notificationsEnabled: v });
+    if (v) await ensureWeighReminder();
   };
 
   const [pushBusy, setPushBusy] = useState(false);
@@ -255,6 +256,7 @@ function NotificationsSection() {
       }
       const r = await enableServerPush();
       setPerm(notificationPermission());
+      if (r === 'ok') await ensureWeighReminder();
       const msg: Record<typeof r, string> = {
         ok: 'Уведомления включены',
         denied: 'Разрешение на уведомления не выдано. Его можно включить в настройках браузера или iOS.',
@@ -278,7 +280,7 @@ function NotificationsSection() {
     if (!reminders.length || !(await showReminder(reminders[0], `test${Date.now()}`))) toast('Не удалось показать уведомление', { tone: 'error' });
   };
 
-  const newReminder = (): Reminder => ({ id: uid(), enabled: true, label: DEFAULT_LABELS.weigh, kind: 'weigh', time: '08:00', days: [0, 1, 2, 3, 4, 5, 6], parity: 'all', createdAt: Date.now() });
+  const newReminder = (): Reminder => ({ id: uid(), enabled: true, label: DEFAULT_LABELS.weigh, kind: 'weigh', time: '07:00', days: [0, 1, 2, 3, 4, 5, 6], parity: 'all', createdAt: Date.now() });
 
   return (
     <section className="card">
@@ -321,13 +323,6 @@ function NotificationsSection() {
           <option value={0}>Не повторять</option>
         </select>
       </div>
-      <div className="field" style={{ marginTop: 12 }}>
-        <label htmlFor="snooze">«Отложить» на</label>
-        <select id="snooze" className="input" value={settings.snoozeMinutes} onChange={(e) => void saveSettings({ snoozeMinutes: Number(e.target.value) })}>
-          {[10, 15, 30, 60, 120].map((m) => <option key={m} value={m}>{m} минут</option>)}
-        </select>
-      </div>
-      <WakeLink />
       <div className="row between" style={{ marginTop: 16 }}>
         <h3>Расписание</h3>
         <button className="btn sm" onClick={() => setEditing(newReminder())} data-testid="add-reminder"><Icon name="plus" size={16} /> Добавить</button>
@@ -345,7 +340,7 @@ function NotificationsSection() {
                   <span className="strong">{r.label}</span>
                   <span className="small muted" style={{ display: 'block' }}>
                     {describeReminder(r)}
-                    {r.enabled && next ? ` · след.: ${formatDate(toISODate(next))} ${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}` : !r.enabled ? ' · выключено' : ''}
+                    {!r.enabled ? ' · выключено' : (r.kind !== 'custom' || r.habitId) && settings.repeatMinutes > 0 ? ` · повтор каждые ${settings.repeatMinutes} мин, пока не сделано` : next ? ` · след.: ${formatDate(toISODate(next))}` : ''}
                   </span>
                 </span>
                 <Icon name="right" size={18} className="faint" />
@@ -354,6 +349,7 @@ function NotificationsSection() {
           })}
         </div>
       )}
+      <WakeLink />
       <div className="row wrap" style={{ marginTop: 12 }}>
         <button className="btn sm" disabled={perm !== 'granted' || (!pushOn && !reminders.length)} onClick={testNotification}>
           Проверить уведомление
@@ -701,46 +697,66 @@ function AboutSection() {
   );
 }
 
-/** iPhone Shortcuts hook: a personal automation calls this link when the user wakes up. */
+/** Optional: an iPhone Shortcuts automation on the iPhone alarm calls this link right after waking up. */
 function WakeLink() {
   const { settings } = useData();
   const { toast } = useFeedback();
   const [open, setOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
   const link = settings.pushId ? wakeLink() : null;
   if (!link) return null;
+  const check = async () => {
+    setChecking(true);
+    try {
+      const r = await fetch(`${link}&test=1`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
+      const t = await r.text();
+      toast(t, { tone: r.ok ? 'success' : 'error' });
+    } catch {
+      toast('Нет связи с сервером уведомлений', { tone: 'error' });
+    } finally {
+      setChecking(false);
+    }
+  };
   return (
     <div className="wake">
       <button type="button" className="list-item" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span className="list-icon tint"><Icon name="sun" size={18} /></span>
         <span className="list-text">
-          <span className="list-title">Напомнить сразу после пробуждения</span>
-          <span className="list-sub">Через «Команды» на iPhone</span>
+          <span className="list-title">Напоминать сразу после будильника</span>
+          <span className="list-sub">Необязательно: обычное напоминание работает и без этого</span>
         </span>
         <Icon name="down" size={16} className="chev" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }} />
       </button>
       {open && (
         <div className="wake-body fade-up">
+          <p className="small muted">Если будильник на iPhone прозвенит раньше напоминания, FORMA напомнит сразу, а в обычное время повторять не будет.</p>
           <ol className="small">
-            <li>Открой «Команды» → «Автоматизация» → «+».</li>
-            <li>Выбери «Пробуждение» (режим сна) или «Будильник» → «Остановлен».</li>
-            <li>«Запускать сразу» → новая команда → действие «Получить содержимое URL».</li>
-            <li>Вставь ссылку ниже.</li>
+            <li>Открой приложение «Команды» → вкладка «Автоматизация» внизу → «+».</li>
+            <li>В списке выбери «Будильник».</li>
+            <li>Отметь «Остановлен» и «Любой будильник». Выбери запуск без подтверждения («Запускать сразу») → «Далее».</li>
+            <li>«Новая пустая автоматизация» → «Добавить действие» → в поиске набери «URL» → «Получить содержимое URL».</li>
+            <li>Нажми на синее слово «URL», вставь ссылку → «Готово».</li>
           </ol>
-          <button
-            type="button"
-            className="btn sm"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(link);
-                toast('Ссылка скопирована', { tone: 'success' });
-              } catch {
-                toast('Не удалось скопировать', { tone: 'error' });
-              }
-            }}
-          >
-            Скопировать ссылку
-          </button>
-          <p className="xs faint">Ссылка личная — не публикуй её.</p>
+          <div className="row wrap">
+            <button
+              type="button"
+              className="btn sm primary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(link);
+                  toast('Ссылка скопирована', { tone: 'success' });
+                } catch {
+                  toast('Не удалось скопировать', { tone: 'error' });
+                }
+              }}
+            >
+              Скопировать ссылку
+            </button>
+            <button type="button" className="btn sm" onClick={check} aria-busy={checking} data-testid="wake-check">
+              Проверить
+            </button>
+          </div>
+          <p className="xs faint">Нужен будильник именно на iPhone: будильник на браслете автоматизацию не запускает. Ссылка личная — не публикуй её.</p>
         </div>
       )}
     </div>
