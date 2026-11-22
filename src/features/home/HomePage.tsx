@@ -13,6 +13,7 @@ import { Icon } from '@/ui/Icon';
 import { useFeedback } from '@/ui/feedback';
 import { skippedToday, skipToday } from '@/lib/push';
 import { Flame } from '@/ui/Flame';
+import { StartSheet } from '@/features/goal/StartSheet';
 import { Sheet } from '@/ui/Sheet';
 import { mainStreak, streakTargets, weighStreak } from '@/lib/streaks';
 import { plural } from '@/lib/format';
@@ -83,6 +84,7 @@ function HeroCard({ s }: { s: Summary }) {
   const openEntry = useOpenEntry();
   const status = STATUS_TEXT[s.status];
   const f = s.forecast;
+  const [startOpen, setStartOpen] = useState(false);
 
   if (!s.points.length) {
     return (
@@ -127,10 +129,11 @@ function HeroCard({ s }: { s: Summary }) {
       {m ? (
         <MaintenanceBand s={s} />
       ) : g && s.target != null && prog ? (
-        <Journey start={g.startWeight} target={s.target} fraction={prog.fraction} left={prog.leftKg} reached={prog.state === 'reached'} />
+        <Journey start={g.startWeight} target={s.target} fraction={prog.fraction} left={prog.leftKg} reached={prog.state === 'reached'} onStart={() => setStartOpen(true)} />
       ) : null}
       <AddRow />
       <span className="sr-only" data-testid="status">{status.title}</span>
+      {startOpen && g && <StartSheet goal={g} onClose={() => setStartOpen(false)} />}
       {f.status === 'ok' && f.date && !m && <span className="sr-only" data-testid="forecast">Прогноз: {formatDate(f.date)}</span>}
     </section>
   );
@@ -169,7 +172,7 @@ function AddRow() {
   );
 }
 
-function Journey({ start, target, fraction, left, reached }: { start: number; target: number; fraction: number; left: number; reached: boolean }) {
+function Journey({ start, target, fraction, left, reached, onStart }: { start: number; target: number; fraction: number; left: number; reached: boolean; onStart?: () => void }) {
   const pct = Math.round(fraction * 1000) / 10;
   return (
     <div className="journey">
@@ -185,10 +188,10 @@ function Journey({ start, target, fraction, left, reached }: { start: number; ta
         <span className="journey-pin" style={{ left: `${pct}%` }} />
       </div>
       <div className="journey-labels">
-        <span>
-          <span className="t-caption">Старт</span>
+        <button type="button" className="journey-start" onClick={onStart} aria-label={`Старт ${fmtKg(start)}. Изменить`}>
+          <span className="t-caption">Старт ✎</span>
           <span className="num">{fmtKg(start)}</span>
-        </span>
+        </button>
         <span className="journey-left">
           <span className="t-caption">{reached ? 'Цель' : 'Осталось'}</span>
           <span className="num strong" data-testid="left-kg">{reached ? 'достигнута' : fmtKg(left)}</span>

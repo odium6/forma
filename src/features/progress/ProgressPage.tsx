@@ -14,7 +14,7 @@ import { ChipGroup, EmptyState, Segmented } from '@/ui/controls';
 import { Sheet } from '@/ui/Sheet';
 import { useFeedback } from '@/ui/feedback';
 import { Icon } from '@/ui/Icon';
-import type { AppData, Entry } from '@/domain/types';
+import type { AppData, Entry, MeasurementKey } from '@/domain/types';
 import './progress.css';
 
 type Tab = 'weight' | 'body' | 'compare' | 'history';
@@ -194,6 +194,24 @@ function BodyTab({ data }: { data: AppData }) {
           <EmptyState icon="ruler" title="Нет измерений" text="Добавь значение во время следующего внесения данных." action={<button className="btn primary" onClick={() => openEntry({ focus: 'measurements' })}>Внести измерения</button>} />
         )}
       </section>
+      {pts.length > 0 && (
+        <section className="card">
+          <div className="card-head"><h2>Значения</h2></div>
+          <div className="list">
+            {[...data.entries]
+              .filter((e) => (key === 'bodyFat' ? e.bodyFat != null : e.measurements[key as MeasurementKey] != null))
+              .reverse()
+              .slice(0, 30)
+              .map((e) => (
+                <button key={e.id} className="list-item" onClick={() => openEntry({ entryId: e.id })} aria-label={`Изменить запись от ${formatDate(e.date)}`}>
+                  <span className="grow">{formatDate(e.date, { year: true })}</span>
+                  <span className="num strong">{fmtNum(key === 'bodyFat' ? e.bodyFat! : e.measurements[key as MeasurementKey]!, 2)} {unit}</span>
+                  <Icon name="edit" size={16} className="chev" />
+                </button>
+              ))}
+          </div>
+        </section>
+      )}
       <section className="card">
         <div className="card-head">
           <h2>Свои параметры</h2>
@@ -368,7 +386,7 @@ function HistoryTab({ data }: { data: AppData }) {
 
   return (
     <div className="stack history">
-      <p className="small muted">Записей: <span className="num strong">{rows.length}</span>. Нажми на запись, чтобы открыть и изменить её.</p>
+      <p className="small muted">Записей: <span className="num strong">{rows.length}</span></p>
       {groups.map((g) => (
         <section key={g.month} className="section">
           <h2 className="group-title">{monthTitle(g.month)}</h2>
@@ -386,6 +404,9 @@ function HistoryTab({ data }: { data: AppData }) {
                       <span className="num strong">{e.weight != null ? fmtKg(e.weight) : e.note ? 'Заметка' : '—'}</span>
                       {(extra || e.note) && <span className="list-sub hist-extra">{[extra, e.note].filter(Boolean).join(' · ')}</span>}
                     </span>
+                  </button>
+                  <button className="btn icon sm ghost" aria-label="Изменить" onClick={() => openEntry({ entryId: e.id })}>
+                    <Icon name="edit" size={17} />
                   </button>
                   <button className="btn icon sm ghost" aria-label="Удалить" onClick={() => remove(e)}>
                     <Icon name="trash" size={17} />

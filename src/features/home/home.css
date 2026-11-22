@@ -103,3 +103,4 @@
 .streak-ok { color: var(--success); font-weight: 600; }
 .streak-badge { display: inline-flex; align-items: center; gap: 3px; font-size: var(--t-secondary); font-weight: 650; color: #e8772e; flex: none; }
 :root[data-theme='dark'] .streak-badge { color: #ffa94d; }
+.journey-start { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; background: none; border: 0; padding: 0; color: inherit; text-align: left; font-size: var(--t-secondary); }

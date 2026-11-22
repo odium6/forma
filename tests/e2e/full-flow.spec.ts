@@ -97,6 +97,15 @@ test('полный сценарий FORMA', async ({ page, context }) => {
   await page.getByRole('radio', { name: 'История' }).click();
   await expect(page.getByTestId('history-row')).toHaveCount(2);
 
+  // ── start point: move it to an earlier date; it becomes a history entry too ──
+  await page.getByRole('radio', { name: 'Вес' }).click();
+  await page.getByTestId('edit-start').click();
+  await page.getByTestId('start-date').fill('2026-01-10');
+  await page.getByTestId('start-save').click();
+  await expect(page.getByText('Стартовая точка обновлена')).toBeVisible();
+  await page.getByRole('radio', { name: 'История' }).click();
+  await expect(page.getByTestId('history-row')).toHaveCount(3);
+
   // ── calendar ──
   await page.goto('/#/calendar');
   await page.locator('.cal-day.today').click();

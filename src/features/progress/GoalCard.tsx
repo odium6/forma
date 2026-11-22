@@ -6,6 +6,7 @@ import { formatDate, today } from '@/lib/dates';
 import { fmtKg, fmtNum, parseDecimal } from '@/lib/format';
 import { GoalEditor, goalDraftValid, SHAPES, useGoalEvaluation, type GoalDraft } from '@/features/goal/GoalEditor';
 import { saveGoalDraft } from '@/features/goal/saveGoal';
+import { StartSheet } from '@/features/goal/StartSheet';
 import { Sheet } from '@/ui/Sheet';
 import { NumberField, Notice } from '@/ui/controls';
 import { useFeedback } from '@/ui/feedback';
@@ -13,6 +14,7 @@ import { Icon } from '@/ui/Icon';
 
 export function GoalCard({ data, summary: s }: { data: AppData; summary: Summary }) {
   const [editing, setEditing] = useState(false);
+  const [startOpen, setStartOpen] = useState(false);
   const { toast, confirm } = useFeedback();
   const g = s.goal;
   const m = data.maintenance?.enabled ? data.maintenance : null;
@@ -61,8 +63,15 @@ export function GoalCard({ data, summary: s }: { data: AppData; summary: Summary
             {fmtKg(g.startWeight)} → <span className="strong num">{g.targetWeight != null ? fmtKg(g.targetWeight) : '—'}</span>
             {g.targetDate && <span className="muted"> к {formatDate(g.targetDate)}</span>}
           </p>
+          <button className="start-row" onClick={() => setStartOpen(true)} data-testid="edit-start">
+            <span className="list-text">
+              <span className="list-sub">Старт</span>
+              <span className="num">{formatDate(g.startDate, { year: true })} · {fmtKg(g.startWeight)}</span>
+            </span>
+            <Icon name="edit" size={16} className="chev" />
+          </button>
           <p className="muted">
-            Старт {formatDate(g.startDate)} · темп ≈ {fmtNum(g.pacePctPerWeek, 2)}%/нед
+            Темп ≈ {fmtNum(g.pacePctPerWeek, 2)}%/нед
             {g.targetBodyFat != null && ` · жир ${fmtNum(g.targetBodyFat, 0)}%`}
           </p>
           {shape && <p className="muted">{shape.icon} {shape.title}{g.shapeNote ? ` — ${g.shapeNote}` : ''}</p>}
@@ -83,6 +92,7 @@ export function GoalCard({ data, summary: s }: { data: AppData; summary: Summary
         <p className="small muted">Цель не задана. Можно отслеживать вес и без цели — или задать её, чтобы видеть прогресс и прогноз.</p>
       )}
       {editing && <GoalSheet data={data} summary={s} onClose={() => setEditing(false)} />}
+      {startOpen && g && <StartSheet goal={g} onClose={() => setStartOpen(false)} />}
     </section>
   );
 }

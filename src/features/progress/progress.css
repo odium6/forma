@@ -28,3 +28,4 @@
 .hist-main { display: flex; align-items: center; gap: 14px; flex: 1 1 auto; min-width: 0; background: none; border: 0; padding: 10px 0; text-align: left; color: inherit; }
 .hist-date { display: flex; flex-direction: column; width: 92px; flex: none; font-size: var(--t-secondary); }
 .hist-extra { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.start-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: var(--r-sm); border: 0; background: var(--surface-2); color: var(--text-primary); text-align: left; }
