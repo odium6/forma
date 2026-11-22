@@ -21,7 +21,7 @@ interface ConfirmOpts {
 }
 
 interface FeedbackApi {
-  toast: (text: string, opts?: { tone?: Toast['tone']; action?: Toast['action'] }) => void;
+  toast: (text: string, opts?: { tone?: Toast['tone']; action?: Toast['action']; sticky?: boolean }) => void;
   confirm: (o: ConfirmOpts) => Promise<boolean>;
 }
 
@@ -33,6 +33,8 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [typed, setTyped] = useState('');
   const seq = useRef(0);
   const toastLayer = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{ id: number; x: number; y: number; el: HTMLDivElement } | null>(null);
+  const dismiss = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
   // Toasts live in a manual popover so they render in the top layer, above open dialogs.
   useEffect(() => {
@@ -49,7 +51,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const toast = useCallback<FeedbackApi['toast']>((text, opts) => {
     const id = ++seq.current;
     setToasts((t) => [...t.slice(-2), { id, text, tone: opts?.tone ?? 'default', action: opts?.action }]);
-    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts?.action ? 6000 : 3200);
+    if (!opts?.sticky) window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts?.action ? 6000 : 3200);
   }, []);
 
   const confirm = useCallback<FeedbackApi['confirm']>(
@@ -74,7 +76,43 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
       {children}
       <div ref={toastLayer} className="toasts" role="status" aria-live="polite" popover="manual">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.tone}`}>
+          <div
+            key={t.id}
+            className={`toast toast-${t.tone}`}
+            onClick={(e) => {
+              if (!(e.target as HTMLElement).closest('.toast-action')) dismiss(t.id);
+            }}
+            onTouchStart={(e) => {
+              const p = e.touches[0];
+              swipe.current = { id: t.id, x: p.clientX, y: p.clientY, el: e.currentTarget };
+            }}
+            onTouchMove={(e) => {
+              const s = swipe.current;
+              if (!s || s.id !== t.id) return;
+              const dx = e.touches[0].clientX - s.x;
+              const dy = Math.min(0, e.touches[0].clientY - s.y);
+              s.el.style.transition = 'none';
+              s.el.style.transform = `translate(${dx}px, ${dy}px)`;
+              s.el.style.opacity = String(Math.max(0.2, 1 - (Math.abs(dx) + Math.abs(dy)) / 200));
+            }}
+            onTouchEnd={(e) => {
+              const s = swipe.current;
+              swipe.current = null;
+              if (!s || s.id !== t.id) return;
+              const p = e.changedTouches[0];
+              const dx = p.clientX - s.x;
+              const dy = p.clientY - s.y;
+              s.el.style.transition = 'transform 200ms, opacity 200ms';
+              if (Math.abs(dx) > 50 || dy < -24) {
+                s.el.style.transform = Math.abs(dx) > 50 ? `translateX(${dx > 0 ? 120 : -120}%)` : 'translateY(-140%)';
+                s.el.style.opacity = '0';
+                window.setTimeout(() => dismiss(t.id), 180);
+              } else {
+                s.el.style.transform = '';
+                s.el.style.opacity = '';
+              }
+            }}
+          >
             {t.tone === 'success' && <Icon name="check" size={18} />}
             {t.tone === 'error' && <Icon name="alert" size={18} />}
             <span className="grow">{t.text}</span>

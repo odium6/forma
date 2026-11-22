@@ -19,13 +19,28 @@ function csp(): Plugin {
   };
 }
 
+/** Every published build gets its own number: 1.<GitHub Actions run>. Local builds are marked "dev". */
+const APP_VERSION = process.env.GITHUB_RUN_NUMBER ? `1.${process.env.GITHUB_RUN_NUMBER}` : `${process.env.npm_package_version ?? '1.0'}-dev`;
+
+/** version.json lets the running app check whether it is the latest published version. */
+function versionFile(): Plugin {
+  return {
+    name: 'forma-version-file',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: APP_VERSION, builtAt: new Date().toISOString() }) });
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  define: { __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '1.0.0') },
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION), __BUILD_TIME__: JSON.stringify(new Date().toISOString()) },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [
     react(),
     csp(),
+    versionFile(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -35,7 +50,7 @@ export default defineConfig({
       manifest: false,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,webmanifest,txt}'],
-        globIgnores: ['splash/**'],
+        globIgnores: ['splash/**', 'version.json'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       devOptions: { enabled: false },

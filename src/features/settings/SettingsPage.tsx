@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { PageHeader, useIsDesktop } from '@/app/Layout';
-import { requestPersistence, storageEstimate } from '@/app/pwa';
+import { latestVersion, requestPersistence, storageEstimate } from '@/app/pwa';
 import { useLock } from '@/app/lock';
 import type { ActivityLevel, Reminder, Sex } from '@/domain/types';
 import { deleteReminder, refreshAfterImport, saveProfile, saveReminder, saveSettings, useData, wipeAll } from '@/state/store';
@@ -685,7 +685,7 @@ function AboutSection() {
         <LogoMark size={52} />
         <div>
           <h2>FORMA</h2>
-          <p className="small muted">Версия {__APP_VERSION__}</p>
+          <VersionLine />
         </div>
       </div>
       {!standalone && (
@@ -745,4 +745,37 @@ function WakeLink() {
       )}
     </div>
   );
+}
+
+function VersionLine() {
+  const [latest, setLatest] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    void latestVersion().then(setLatest);
+  }, []);
+  const current = latest == null || latest === __APP_VERSION__;
+  return (
+    <p className="small muted" data-testid="app-version">
+      Версия <span className="num strong">{__APP_VERSION__}</span>
+      {latest === undefined ? '' : latest === null ? ' · не удалось проверить обновления' : current ? <span className="accent"> · актуальная ✓</span> : (
+        <>
+          {' · '}доступна {latest}{' '}
+          <button className="link-btn" onClick={() => void updateNow()}>Обновить</button>
+        </>
+      )}
+    </p>
+  );
+}
+
+async function updateNow() {
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    await reg?.update();
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
+  } catch {
+    /* fall through to a plain reload */
+  }
+  location.reload();
 }

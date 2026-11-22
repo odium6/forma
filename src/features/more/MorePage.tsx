@@ -36,6 +36,7 @@ export default function MorePage() {
           </div>
         </section>
       ))}
+      <p className="xs faint center num">FORMA {__APP_VERSION__}</p>
     </div>
   );
 }

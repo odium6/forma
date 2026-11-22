@@ -41,3 +41,5 @@
 }
 :root[data-theme='dark'] .toast-action { color: var(--green-strong); }
 @keyframes toast-in { from { transform: translateY(-14px) scale(0.96); opacity: 0; } }
+
+.toast { cursor: pointer; touch-action: none; user-select: none; }

@@ -61,7 +61,7 @@ export function HomePage() {
       <div className="dash">
         <div className="col">
           <StreakCard data={data} />
-          <HeroCard s={s} />
+          <HeroCard s={s} data={data} />
           {s.points.length > 0 && (
             <section className="card" aria-labelledby="chart-h">
               <div className="card-head">
@@ -80,7 +80,7 @@ export function HomePage() {
   );
 }
 
-function HeroCard({ s }: { s: Summary }) {
+function HeroCard({ s, data }: { s: Summary; data: AppData }) {
   const openEntry = useOpenEntry();
   const status = STATUS_TEXT[s.status];
   const f = s.forecast;
@@ -102,7 +102,8 @@ function HeroCard({ s }: { s: Summary }) {
   const m = s.maintenance;
   const g = s.goal;
   // the hero shows the weight the user actually entered last; the smoothed trend lives in charts
-  const now = s.latest!.value;
+  // exactly what was entered last (several readings on one day are averaged in s.latest)
+  const now = [...data.entries].reverse().find((e) => e.weight != null)?.weight ?? s.latest!.value;
   const fromStart = g ? now - g.startWeight : null;
   const prog = g && s.target != null ? goalProgress(g.startWeight, s.target, now) : null;
   const pct = prog ? Math.round(prog.fraction * 100) : null;
@@ -130,6 +131,12 @@ function HeroCard({ s }: { s: Summary }) {
         <MaintenanceBand s={s} />
       ) : g && s.target != null && prog ? (
         <Journey start={g.startWeight} target={s.target} fraction={prog.fraction} left={prog.leftKg} reached={prog.state === 'reached'} onStart={() => setStartOpen(true)} />
+      ) : null}
+      {!m && g && s.target != null && prog && prog.state !== 'reached' && (g.targetDate || (f.status === 'ok' && f.date)) ? (
+        <p className="goal-date">
+          <Icon name="target" size={15} />
+          {g.targetDate ? <>Цель к <strong>{formatDate(g.targetDate, { year: true })}</strong></> : <>Прогноз: <strong>{formatDate(f.date!, { year: true })}</strong></>}
+        </p>
       ) : null}
       <AddRow />
       <span className="sr-only" data-testid="status">{status.title}</span>
