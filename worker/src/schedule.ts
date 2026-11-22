@@ -1,5 +1,5 @@
 import type { Reminder, Settings } from '../../src/domain/types';
-import { inQuietHours, lastOccurrence, nextOccurrence } from '../../src/lib/reminders';
+import { inQuietHours, lastOccurrence, minutesOf, nextOccurrence, occursOn } from '../../src/lib/reminders';
 import { toISODate } from '../../src/lib/dates';
 import { reminderText, reminderUrl } from '../../src/lib/notificationTexts';
 
@@ -152,25 +152,39 @@ export function applySnooze(state: SubState, reminderId: string, nowUtc: number,
   return { ...state, snooze: { ...state.snooze, [reminderId]: { until: nowUtc + minutes * 60_000, count: cur.count + 1 } } };
 }
 
+/** A wake-up earlier than this before the weighing reminder (e.g. a 2 AM alarm) is ignored. */
+export const WAKE_WINDOW_MINUTES = 180;
+
+export type WakeReason = 'sent' | 'done' | 'recent' | 'night' | 'early' | 'none';
+
 /**
- * "I'm awake" trigger (e.g. from an iPhone Shortcuts automation): sends the weighing reminder now,
- * starts the repeat cycle and marks today's scheduled weighing reminders as delivered.
+ * "I'm awake" trigger (an iPhone Shortcuts automation on the alarm): sends the weighing reminder now,
+ * starts the repeat cycle and marks today's scheduled reminder as delivered. Only counts in the
+ * morning: not during quiet hours and not more than WAKE_WINDOW_MINUTES before the reminder.
  */
-export function wakeDelivery(cfg: SubConfig, state: SubState, nowUtc: Date, timeZone: string): { delivery: Delivery | null; state: SubState } {
+export function wakeDelivery(cfg: SubConfig, state: SubState, nowUtc: Date, timeZone: string): { delivery: Delivery | null; state: SubState; reason: WakeReason } {
   const wall = wallClock(nowUtc, timeZone);
   const today = wallDate(wall);
+  const nowMin = wall.getHours() * 60 + wall.getMinutes();
+  const weigh = cfg.reminders.filter((r) => r.enabled && r.kind === 'weigh' && occursOn(r, today));
+  const no = (reason: WakeReason) => ({ delivery: null, state, reason });
+  if (!weigh.length) return no('none');
+  if (state.done.weigh === today || weigh.some((r) => state.skip[r.id] === today)) return no('done');
+  const hhmm = `${String(wall.getHours()).padStart(2, '0')}:${String(wall.getMinutes()).padStart(2, '0')}`;
+  if (inQuietHours(hhmm, cfg.quietHours)) return no('night');
+  if (nowMin < Math.min(...weigh.map((r) => minutesOf(r.time))) - WAKE_WINDOW_MINUTES) return no('early');
+  if (weigh.some((r) => { const n = state.nag?.[r.id]; return n && n.date === today && nowUtc.getTime() - n.last < 5 * 60_000; })) return no('recent');
+
   const next: SubState = { ...state, fired: { ...state.fired }, nag: { ...(state.nag ?? {}) } };
-  const weigh = cfg.reminders.filter((r) => r.enabled && r.kind === 'weigh');
-  if (state.done.weigh === today || weigh.some((r) => state.skip[r.id] === today)) return { delivery: null, state };
-  if (weigh.some((r) => { const n = state.nag?.[r.id]; return n && n.date === today && nowUtc.getTime() - n.last < 5 * 60_000; })) return { delivery: null, state };
   for (const r of weigh) {
     const occ = nextOccurrence(r, new Date(wall.getTime() - 60_000), cfg.quietHours);
     if (occ && wallDate(occ) === today) next.fired[r.id] = Math.max(next.fired[r.id] ?? 0, occ.getTime());
     next.nag![r.id] = { date: today, last: nowUtc.getTime(), count: 0 };
   }
-  const r = weigh[0] ?? { id: '', enabled: true, label: 'Взвешивание', kind: 'weigh' as const, time: '07:00', days: [], parity: 'all' as const, createdAt: 0 };
+  const r = weigh[0];
   return {
-    delivery: { reminder: r, title: r.label || 'Взвешивание', body: reminderText(r, `${today}wake`, cfg.motivation), url: reminderUrl('weigh'), tag: `forma-${r.id || 'wake'}` },
+    delivery: { reminder: r, title: r.label || 'Взвешивание', body: reminderText(r, `${today}wake`, cfg.motivation), url: reminderUrl('weigh'), tag: `forma-${r.id}` },
     state: next,
+    reason: 'sent',
   };
 }

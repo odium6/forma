@@ -134,5 +134,17 @@ describe('push schedule (server)', () => {
     });
     expect(counts).toEqual([1, 0, 1]);
   });
+
+  it('a night alarm is not a wake-up: no reminder, no repeats, the morning reminder stays', () => {
+    const tz = 'Europe/Moscow';
+    const c = cfg({ reminders: [rem({ time: '07:00' })], quietHours: { enabled: false, start: '00:00', end: '06:00' } });
+    const night = wakeDelivery(c, EMPTY_STATE, at('2026-01-04T23:00:00Z'), tz); // 02:00 Moscow
+    expect(night.delivery).toBeNull();
+    expect(night.reason).toBe('early');
+    expect(dueDeliveries(c, night.state, at('2026-01-05T04:00:20Z'), tz).deliveries).toHaveLength(1); // 07:00 still arrives
+    const quiet = cfg({ reminders: [rem({ time: '07:00' })], quietHours: { enabled: true, start: '00:00', end: '06:00' } });
+    expect(wakeDelivery(quiet, EMPTY_STATE, at('2026-01-05T02:30:00Z'), tz).reason).toBe('night'); // 05:30, quiet hours
+    expect(wakeDelivery(quiet, EMPTY_STATE, at('2026-01-05T03:30:00Z'), tz).reason).toBe('sent'); // 06:30
+  });
 });
 

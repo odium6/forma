@@ -1,7 +1,7 @@
 import { buildPushHTTPRequest } from '@pushforge/builder';
 import { z } from 'zod';
 import { reminderSchema } from '../../src/lib/backup/schema';
-import { applySnooze, dueDeliveries, EMPTY_STATE, wakeDelivery, wallClock, wallDate, type SubConfig, type SubState } from './schedule';
+import { applySnooze, dueDeliveries, EMPTY_STATE, wakeDelivery, wallClock, wallDate, type SubConfig, type SubState, type WakeReason } from './schedule';
 
 /**
  * FORMA push Worker (Cloudflare Workers Free + D1).
@@ -127,10 +127,16 @@ async function handle(req: Request, env: Env): Promise<Response> {
 
     if (now - (st.lastWake ?? 0) < 5 * 60_000) return text('Напоминание уже отправлено несколько минут назад');
     const cfg = JSON.parse(s.row.config) as SubConfig;
-    const { delivery, state } = wakeDelivery(cfg, s.state, new Date(), s.row.tz);
+    const { delivery, state, reason } = wakeDelivery(cfg, s.state, new Date(), s.row.tz);
     if (!delivery) {
-      await saveState(env, s.row.id, state);
-      return text('Сегодня вес уже внесён (или нажато «Сегодня не могу») — напоминание не нужно');
+      const why: Record<Exclude<WakeReason, 'sent'>, string> = {
+        done: 'Сегодня вес уже внесён (или нажато «Сегодня не могу») — напоминание не нужно',
+        recent: 'Напоминание уже отправлено несколько минут назад',
+        night: 'Сейчас тихие часы — ночной будильник не считается, напомню утром',
+        early: 'Слишком рано — будильник не считается пробуждением, напомню в обычное время',
+        none: 'На сегодня напоминание о взвешивании не запланировано',
+      };
+      return text(why[reason as Exclude<WakeReason, 'sent'>]);
     }
     await saveState(env, s.row.id, { ...state, lastWake: now } as SubState);
     const status = await sendPush(env, s.row, { title: delivery.title, body: delivery.body, url: delivery.url, tag: delivery.tag, reminderId: delivery.reminder.id, kind: 'weigh', sub: s.row.id });
